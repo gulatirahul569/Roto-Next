@@ -9,6 +9,7 @@ import {
   FiCheckCircle,
   FiClock,
   FiDollarSign,
+  FiImage,
   FiPackage,
   FiShoppingBag,
   FiTrendingUp,
@@ -24,7 +25,7 @@ const RevenueChart = dynamic(
     loading: () => (
       <div className="h-72 animate-pulse rounded-2xl bg-zinc-100" />
     ),
-  }
+  },
 );
 
 function formatPrice(price) {
@@ -63,9 +64,7 @@ function KpiCard({ title, value, subtitle, icon: Icon, tone }) {
 
         <p className="mt-5 text-3xl font-black tracking-tight">{value}</p>
 
-        <p className="mt-2 text-xs font-semibold text-white/70">
-          {subtitle}
-        </p>
+        <p className="mt-2 text-xs font-semibold text-white/70">{subtitle}</p>
       </div>
     </article>
   );
@@ -137,7 +136,7 @@ export default function AdminDashboardPage() {
         console.error("Admin dashboard error:", error);
 
         setErrorMessage(
-          error.message || "Unable to load dashboard statistics."
+          error.message || "Unable to load dashboard statistics.",
         );
       }
     }
@@ -192,9 +191,19 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-extrabold text-emerald-700">
-          <span className="size-2 animate-pulse rounded-full bg-emerald-500" />
-          Live dashboard data
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/admin/media"
+            className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-4 py-2 text-xs font-extrabold text-white transition hover:bg-zinc-800"
+          >
+            <FiImage size={15} />
+            Media Library
+          </Link>
+
+          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-extrabold text-emerald-700">
+            <span className="size-2 animate-pulse rounded-full bg-emerald-500" />
+            Live dashboard data 
+          </div>
         </div>
       </section>
 
@@ -247,9 +256,7 @@ export default function AdminDashboardPage() {
                 Order status
               </h2>
 
-              <p className="text-xs text-zinc-500">
-                Current order pipeline
-              </p>
+              <p className="text-xs text-zinc-500">Current order pipeline</p>
             </div>
           </div>
 

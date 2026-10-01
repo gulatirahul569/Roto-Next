@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   FiArrowLeft,
   FiBox,
+  FiFilm,
   FiGrid,
   FiLogOut,
   FiPackage,
@@ -40,6 +41,11 @@ const navigationItems = [
     label: "Users",
     href: "/admin/users",
     icon: FiUsers,
+  },
+  {
+    label: "Media",
+    href: "/admin/media",
+    icon: FiFilm,
   },
   {
     label: "Settings",
@@ -80,14 +86,18 @@ export default function AdminSidebar({ isOpen, onClose }) {
         />
       )}
 
+      {/* Sidebar */} 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col bg-zinc-950 text-white transition-transform duration-300 lg:translate-x-0 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={[
+          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col",
+          "bg-zinc-950 text-white transition-transform duration-300",
+          "lg:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+        ].join(" ")}
       >
-        {/* Brand area */}
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+        {/* Brand */}
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 py-5">
           <Link
             href="/admin"
             onClick={onClose}
@@ -99,6 +109,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
 
             <div>
               <p className="text-sm font-black tracking-[0.16em]">ROTO</p>
+
               <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">
                 Admin Panel
               </p>
@@ -116,7 +127,8 @@ export default function AdminSidebar({ isOpen, onClose }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-4 py-6">
+        <nav className="admin-sidebar-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-4 py-6">
+          {/* Management */}
           <p className="mb-3 px-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">
             Management
           </p>
@@ -138,7 +150,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
                   }`}
                 >
                   <Icon size={18} />
-                  {item.label}
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
@@ -146,6 +158,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
 
           <div className="my-6 border-t border-white/10" />
 
+          {/* Store */}
           <p className="mb-3 px-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">
             Store
           </p>
@@ -167,50 +180,37 @@ export default function AdminSidebar({ isOpen, onClose }) {
                   }`}
                 >
                   <Icon size={18} />
-                  {item.label}
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
           </div>
 
-          <div className="my-6 border-t border-white/10" />
+          <div className="my-6 border-t mt-14 border-white/10" />
 
+          {/* Back to store */}
           <Link
             href="/"
             onClick={onClose}
-            className="flex items-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-extrabold text-zinc-950 transition hover:bg-zinc-200"
+            className="flex items-center gap-3 rounded-xl bg-white px-3 py-3  text-sm font-extrabold text-zinc-950 transition hover:bg-zinc-200"
           >
             <FiArrowLeft size={18} />
             Back to Store
           </Link>
         </nav>
-
-        {/* User section */}
-        <div className="border-t border-white/10 p-4">
-          <div className="rounded-2xl bg-white/5 p-4">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-zinc-500">
-              Logged in as
-            </p>
-
-            <p className="mt-2 truncate text-sm font-bold text-white">
-              {user?.name || "Admin"}
-            </p>
-
-            <p className="mt-1 truncate text-xs text-zinc-400">
-              {user?.email || ""}
-            </p>
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-3 py-2.5 text-sm font-extrabold text-white transition hover:bg-red-600"
-            >
-              <FiLogOut size={16} />
-              Logout
-            </button>
-          </div>
-        </div>
       </aside>
+
+      {/* Hide scrollbar */}
+      <style jsx global>{`
+        .admin-sidebar-scrollbar {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .admin-sidebar-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </>
   );
 }

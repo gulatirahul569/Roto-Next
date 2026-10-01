@@ -4,11 +4,7 @@ import { requireAdmin } from "../../../../lib/auth";
 
 export const runtime = "nodejs";
 
-const ALLOWED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-];
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
@@ -49,7 +45,18 @@ export async function POST(request) {
 
         const admin = await requireAdmin(authRequest);
 
-        if (!pathname.startsWith("products/")) {
+        const allowedFolders = [
+          "products/",
+          "categories/",
+          "banners/",
+          "logos/",
+        ];
+
+        const isAllowedPath = allowedFolders.some((folder) =>
+          pathname.startsWith(folder),
+        );
+
+        if (!isAllowedPath) {
           throw new Error("Invalid upload destination");
         }
 

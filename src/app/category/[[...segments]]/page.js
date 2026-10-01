@@ -16,8 +16,8 @@ import {
   FiX,
 } from "react-icons/fi";
 import {
+  applyMediaOverrides,
   getDepartmentBySlug,
-  getSubcategoryBySlug,
 } from "../../../data/departmentData";
 import ProductCard from "../../../components/products/ProductCard";
 import { fetchProducts } from "../../../services/productService";
@@ -109,9 +109,7 @@ function TrustStrip() {
               </div>
 
               <div>
-                <p className="text-sm font-black text-zinc-950">
-                  {item.title}
-                </p>
+                <p className="text-sm font-black text-zinc-950">{item.title}</p>
 
                 <p className="mt-0.5 text-xs text-zinc-500">{item.text}</p>
               </div>
@@ -123,13 +121,7 @@ function TrustStrip() {
   );
 }
 
-function SectionHeading({
-  eyebrow,
-  title,
-  description,
-  href,
-  linkText,
-}) {
+function SectionHeading({ eyebrow, title, description, href, linkText }) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="max-w-2xl">
@@ -269,21 +261,26 @@ export default function CategoryPage() {
 
   const departmentSlug = String(segments[0] || "all").toLowerCase();
 
-  const subcategorySlug = segments[1]
-    ? String(segments[1]).toLowerCase()
-    : "";
+  const subcategorySlug = segments[1] ? String(segments[1]).toLowerCase() : "";
 
-  const department = getDepartmentBySlug(departmentSlug);
+  const [mediaOverrides, setMediaOverrides] = useState({});
+
+  const baseDepartment = getDepartmentBySlug(departmentSlug);
+
+  const department = useMemo(() => {
+    return applyMediaOverrides(baseDepartment, mediaOverrides);
+  }, [baseDepartment, mediaOverrides]);
 
   const subcategory = subcategorySlug
-    ? getSubcategoryBySlug(departmentSlug, subcategorySlug)
+    ? department?.subcategories?.find(
+        (item) => item.slug === subcategorySlug,
+      ) || null
     : null;
 
   const isValidRoute =
     Boolean(department) && (!subcategorySlug || Boolean(subcategory));
 
-  const isDepartmentLanding =
-    department?.key !== "ALL" && !subcategory;
+  const isDepartmentLanding = department?.key !== "ALL" && !subcategory;
 
   const isNewDropsPage = department?.slug === "new";
 
@@ -307,47 +304,81 @@ export default function CategoryPage() {
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
 
-  useEffect(() => {
-    if (!isValidRoute || !department) {
-      setIsLoading(false);
-      return;
-    }
+useEffect(() => {
+  let isActive = true;
 
-    async function loadProducts() {
-      try {
-        setIsLoading(true);
-        setError("");
+  async function loadMediaOverrides() {
+    try {
+      const response = await fetch("/api/media", {
+        cache: "no-store",
+      });
 
-        const filters = {};
+      if (!response.ok) {
+        throw new Error("Unable to load media overrides.");
+      }
 
-        if (department.key !== "ALL") {
-          filters.department = department.key;
-        }
+      const data = await response.json();
 
-        if (subcategory) {
-          filters.subcategory = subcategory.slug;
-        }
+      if (isActive) {
+        setMediaOverrides(data.media || {});
+      }
+    } catch (mediaError) {
+      console.error("Category media loading error:", mediaError);
 
-        if (department.slug === "new") {
-          filters.category = "new";
-        }
-
-        const response = await fetchProducts(undefined, filters);
-
-        const productList = response?.products || response || [];
-
-        setProducts(Array.isArray(productList) ? productList : []);
-      } catch (requestError) {
-        console.error("Category product loading error:", requestError);
-
-        setError("Unable to load products right now. Please try again.");
-      } finally {
-        setIsLoading(false);
+      if (isActive) {
+        setMediaOverrides({});
       }
     }
+  }
 
-    loadProducts();
-  }, [department?.key, department?.slug, isValidRoute, subcategory?.slug]);
+  loadMediaOverrides();
+
+  return () => {
+    isActive = false;
+  };
+}, []);
+
+useEffect(() => {
+  if (!isValidRoute || !department) {
+    setIsLoading(false);
+    return;
+  }
+
+  async function loadProducts() {
+    try {
+      setIsLoading(true);
+      setError("");
+
+      const filters = {};
+
+      if (department.key !== "ALL") {
+        filters.department = department.key;
+      }
+
+      if (subcategory) {
+        filters.subcategory = subcategory.slug;
+      }
+
+      if (department.slug === "new") {
+        filters.category = "new";
+      }
+
+      const response = await fetchProducts(undefined, filters);
+
+      const productList = response?.products || response || [];
+
+      setProducts(Array.isArray(productList) ? productList : []);
+    } catch (requestError) {
+      console.error("Category product loading error:", requestError);
+
+      setError("Unable to load products right now. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  loadProducts();
+}, [department?.key, department?.slug, isValidRoute, subcategory?.slug]);
 
   useEffect(() => {
     setSelectedFilter("All");
@@ -397,8 +428,7 @@ export default function CategoryPage() {
   const newProducts = useMemo(() => {
     return products
       .filter(
-        (product) =>
-          String(product.newCategory || "").toLowerCase() === "new",
+        (product) => String(product.newCategory || "").toLowerCase() === "new",
       )
       .slice(0, 4);
   }, [products]);
@@ -469,19 +499,12 @@ export default function CategoryPage() {
     if (sortOption === "Top Rated") {
       return result.sort(
         (firstProduct, secondProduct) =>
-          Number(secondProduct.rating || 0) -
-          Number(firstProduct.rating || 0),
+          Number(secondProduct.rating || 0) - Number(firstProduct.rating || 0),
       );
     }
 
     return result;
-  }, [
-    products,
-    selectedBrand,
-    selectedFilter,
-    selectedPrice,
-    sortOption,
-  ]);
+  }, [products, selectedBrand, selectedFilter, selectedPrice, sortOption]);
 
   if (!isValidRoute) {
     return (
@@ -534,10 +557,7 @@ export default function CategoryPage() {
     department.subcategories.length > 0;
 
   const shouldShowNewProducts =
-    !isLoading &&
-    !isNewDropsPage &&
-    !subcategory &&
-    newProducts.length > 0;
+    !isLoading && !isNewDropsPage && !subcategory && newProducts.length > 0;
 
   const shouldShowFeaturedProducts =
     !isLoading &&
@@ -545,10 +565,7 @@ export default function CategoryPage() {
     !subcategory &&
     featuredProducts.length > 0;
 
-  const shouldShowBrands =
-    !isLoading &&
-    !subcategory &&
-    brands.length > 0;
+  const shouldShowBrands = !isLoading && !subcategory && brands.length > 0;
 
   return (
     <main className="min-h-screen bg-zinc-50">
@@ -645,23 +662,23 @@ export default function CategoryPage() {
         </section>
       )}
 
-{shouldShowNewProducts && (
-  <section className="border-y border-zinc-200 bg-white py-16 lg:py-20">
-    <div className="mx-auto max-w-7xl px-6 lg:px-8">
-      <SectionHeading
-        eyebrow="Fresh arrivals"
-        title={`New in ${department.title}`}
-        description={`Recently added products selected for the ${department.title.toLowerCase()} collection.`}
-        href="/category/new"
-        linkText="View all new drops"
-      />
-    </div>
+      {shouldShowNewProducts && (
+        <section className="border-y border-zinc-200 bg-white py-16 lg:py-20">
+          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+            <SectionHeading
+              eyebrow="Fresh arrivals"
+              title={`New in ${department.title}`}
+              description={`Recently added products selected for the ${department.title.toLowerCase()} collection.`}
+              href="/category/new"
+              linkText="View all new drops"
+            />
+          </div>
 
-    <div className="mt-9">
-      <ProductMarquee products={newProducts} />
-    </div>
-  </section>
-)}
+          <div className="mt-9">
+            <ProductMarquee products={newProducts} />
+          </div>
+        </section>
+      )}
       {shouldShowFeaturedProducts && (
         <section className="bg-zinc-50 py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -694,12 +711,10 @@ export default function CategoryPage() {
                 type="button"
                 onClick={() => {
                   setSelectedBrand("All");
-                  document
-                    .getElementById("products")
-                    ?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    });
+                  document.getElementById("products")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
                 }}
                 className={`rounded-full border px-5 py-3 text-sm font-extrabold transition ${
                   selectedBrand === "All"
@@ -716,12 +731,10 @@ export default function CategoryPage() {
                   type="button"
                   onClick={() => {
                     setSelectedBrand(brand);
-                    document
-                      .getElementById("products")
-                      ?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "start",
-                      });
+                    document.getElementById("products")?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
                   }}
                   className={`rounded-full border px-5 py-3 text-sm font-extrabold transition ${
                     selectedBrand === brand
@@ -875,9 +888,7 @@ export default function CategoryPage() {
 
                   <FiChevronDown
                     size={17}
-                    className={`transition ${
-                      isSortOpen ? "rotate-180" : ""
-                    }`}
+                    className={`transition ${isSortOpen ? "rotate-180" : ""}`}
                   />
                 </button>
 

@@ -12,6 +12,7 @@
     "@react-oauth/google": "^0.13.5",
     "@vercel/blob": "^2.8.0",
     "bcryptjs": "^3.0.3",
+    "browser-image-compression": "^2.0.2",
     "chart.js": "^4.5.1",
     "framer-motion": "^13.4.6",
     "google-auth-library": "^11.1.0",

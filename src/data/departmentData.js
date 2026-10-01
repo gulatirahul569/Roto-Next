@@ -315,3 +315,30 @@ export function getSubcategoryOptions(departmentKey = "") {
 
   return department?.subcategories || [];
 }
+export function applyMediaOverrides(department, media = {}) {
+  if (!department) {
+    return null;
+  }
+
+  const departmentSlug = department.slug;
+
+  const bannerKey = `banners/${departmentSlug}`;
+
+  return {
+    ...department,
+
+    banner: media[bannerKey] || department.banner,
+
+    subcategories: (department.subcategories || []).map(
+      (subcategory) => {
+        const subcategoryKey =
+          `categories/${departmentSlug}/${subcategory.slug}`;
+
+        return {
+          ...subcategory,
+          image: media[subcategoryKey] || subcategory.image,
+        };
+      },
+    ),
+  };
+}
