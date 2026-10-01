@@ -1,3 +1,4 @@
+import { upload } from "@vercel/blob/client";
 import { apiRequest } from "../lib/api";
 
 function createSearchParams(filters = {}) {
@@ -76,14 +77,56 @@ export function deleteProduct(id, token) {
   });
 }
 
-export function uploadProductImage(file, token) {
-  const formData = new FormData();
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
 
-  formData.append("image", file);
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
-  return apiRequest("/upload", {
-    method: "POST",
-    body: formData,
-    token,
+function getSafeFileName(fileName = "product-image") {
+  const normalizedName = String(fileName)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9.-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return normalizedName || "product-image";
+}
+
+export async function uploadProductImage(file, token) {
+  if (!file) {
+    throw new Error("Please select an image file.");
+  }
+
+  if (!token) {
+    throw new Error("Your admin session has expired. Please log in again.");
+  }
+
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    throw new Error("Use a JPG, PNG, or WebP image.");
+  }
+
+  if (file.size > MAX_IMAGE_SIZE) {
+    throw new Error("Image size must be 5 MB or smaller.");
+  }
+
+  const safeFileName = getSafeFileName(file.name);
+
+  const pathname = `products/${Date.now()}-${safeFileName}`;
+
+  const blob = await upload(pathname, file, {
+    access: "public",
+    handleUploadUrl: "/api/blob/upload",
+
+    clientPayload: JSON.stringify({
+      token,
+    }),
   });
+
+  return {
+    imageUrl: blob.url,
+  };
 }
