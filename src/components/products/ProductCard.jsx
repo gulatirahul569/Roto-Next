@@ -1,16 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  FiEye,
-  FiHeart,
-  FiMinus,
-  FiPlus,
-  FiShoppingBag,
-  FiStar,
-} from "react-icons/fi";
+import { FiHeart, FiShoppingBag, FiStar } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
-import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 
 function formatPrice(price) {
@@ -21,218 +14,232 @@ function formatPrice(price) {
   }).format(Number(price || 0));
 }
 
+function formatCount(n) {
+  const num = Number(n || 0);
+  if (num >= 1000) return `${(num / 1000).toFixed(num >= 10000 ? 0 : 1)}k`;
+  return String(num);
+}
+
 export default function ProductCard({ product }) {
   const router = useRouter();
-
   const { user } = useAuth();
-  const { cartItems, addToCart, increaseQty, decreaseQty } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const [activeImage, setActiveImage] = useState(0);
+  const [hovered, setHovered] = useState(false);
 
-  const productName = product.name || product.title || "Roto product";
+  const name = product.name || product.title || "Roto product";
+  const brand = product.brand || product.category || "Roto";
 
-  const isExternalProduct =
-    product.purchaseMode === "EXTERNAL_LINK" ||
-    product.source === "AMAZON";
-
-  const isAmazonProduct = product.source === "AMAZON";
-
-  const externalButtonText =
+  const isAmazon = product.source === "AMAZON";
+  const isExternal = product.purchaseMode === "EXTERNAL_LINK" || isAmazon;
+  const externalText =
     product.externalButtonText ||
-    (isAmazonProduct ? "Explore on Amazon" : "Explore Product");
+    (isAmazon ? "Explore on Amazon" : "Explore Product");
 
-  const cartItem = isExternalProduct
-    ? null
-    : cartItems.find((item) => item._id === product._id);
+  // Collect every possible image source into one clean, de-duplicated list
+  const toUrl = (img) =>
+    typeof img === "string" ? img : img?.url || img?.src || "";
+  const asArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
-  const productIsInWishlist = isInWishlist(product._id);
+  const images = [
+    ...new Set(
+      [
+        product.image,
+        ...asArray(product.images),
+        ...asArray(product.gallery),
+        ...asArray(product.additionalImages),
+        ...asArray(product.imageUrls),
+      ]
+        .map(toUrl)
+        .filter(Boolean)
+    ),
+  ];
+  if (images.length === 0) images.push("/images/product-placeholder.png");
 
-  const rating = Math.max(
-    0,
-    Math.min(5, Math.floor(Number(product.rating) || 0))
-  );
+  // Pricing
+  const price = Number(product.price || 0);
+  const mrp = Number(product.mrp || product.originalPrice || 0);
+  const discount =
+    product.discount ||
+    (mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0);
 
-  const handleWishlist = () => {
+  // Rating
+  const rating = Number(product.rating || 0);
+  const ratingCount = product.ratingCount || product.reviewsCount || 0;
+
+  // Sizes
+  const sizes = Array.isArray(product.sizes)
+    ? product.sizes.join(", ")
+    : product.sizes || "";
+
+  const wished = isInWishlist(product._id);
+
+  // Auto-slide through images while the card is hovered (desktop)
+  useEffect(() => {
+    if (!hovered || images.length < 2) return;
+    const id = setInterval(() => {
+      setActiveImage((prev) => (prev + 1) % images.length);
+    }, 900);
+    return () => clearInterval(id);
+  }, [hovered, images.length]);
+
+  const handleWishlist = (e) => {
+    e.stopPropagation();
     if (!user) {
       window.alert("Please login to add products to your wishlist.");
       router.push("/login");
       return;
     }
-
     toggleWishlist(product);
   };
 
-  const openProductDetails = () => {
-    router.push(`/product/${product._id}`);
-  };
+  const openDetails = () => router.push(`/product/${product._id}`);
 
-  const handleAddToCart = () => {
-    if (isExternalProduct) {
-      return;
-    }
-
-    addToCart(product);
-  };
+  const priceRow = !isExternal ? (
+    <p className="flex items-baseline gap-1.5 text-sm">
+      <span className="font-bold text-zinc-900">{formatPrice(price)}</span>
+      {mrp > price && (
+        <span className="text-xs text-zinc-500 line-through">
+          {formatPrice(mrp)}
+        </span>
+      )}
+      {discount > 0 && (
+        <span className="text-xs text-orange-400">({discount}% OFF)</span>
+      )}
+    </p>
+  ) : (
+    <p className="text-xs font-semibold text-zinc-500">
+      Available through partner
+    </p>
+  );
 
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-      {/* Product image */}
-      <div className="relative flex aspect-[4/4.7] items-center justify-center overflow-hidden bg-zinc-100">
+    <article
+      onClick={openDetails}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => {
+        setHovered(false);
+        setActiveImage(0);
+      }}
+      className="group relative flex cursor-pointer flex-col bg-white transition-shadow duration-200 hover:shadow-[0_2px_16px_4px_rgba(40,44,63,0.07)]"
+    >
+      {/* Image */}
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-zinc-100">
         <img
-          src={product.image || "/images/product-placeholder.png"}
-          alt={productName}
-          className="size-full object-contain transition duration-500 group-hover:scale-105"
+          src={images[activeImage]}
+          alt={name}
+          loading="lazy"
+          className="size-full object-cover"
         />
 
-        {/* New badge */}
-        {String(product.newCategory || "").toLowerCase() === "new" && (
-          <span className="absolute left-3 top-3 rounded-full bg-zinc-950 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white">
-            New
+        {/* Ad / Amazon tag */}
+        {product.isAd && (
+          <span className="absolute right-2 top-2 rounded-sm bg-black/40 px-1 text-[10px] font-semibold text-white">
+            AD
           </span>
         )}
-
-        {/* Amazon badge */}
-        {isAmazonProduct && (
-          <span className="absolute bottom-3 left-3 rounded-full bg-orange-500 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white">
+        {isAmazon && (
+          <span className="absolute right-2 top-2 rounded-sm bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
             Amazon
           </span>
         )}
 
-        {/* Wishlist */}
-        <button
-          type="button"
-          onClick={handleWishlist}
-          aria-label={
-            productIsInWishlist
-              ? `Remove ${productName} from wishlist`
-              : `Add ${productName} to wishlist`
-          }
-          className={`absolute right-3 top-3 z-20 grid size-9 place-items-center rounded-full bg-white shadow-sm transition hover:scale-110 ${
-            productIsInWishlist
-              ? "text-red-500"
-              : "text-zinc-700 hover:text-red-500"
-          }`}
-        >
-          <FiHeart
-            size={18}
-            fill={productIsInWishlist ? "currentColor" : "none"}
-          />
-        </button>
-
-        {/* View product: desktop */}
-        <div className="absolute inset-0 hidden items-center justify-center bg-black/20 opacity-0 transition duration-300 group-hover:opacity-100 md:flex">
-          <button
-            type="button"
-            onClick={openProductDetails}
-            className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-xs font-extrabold uppercase tracking-wide text-zinc-950 shadow-lg transition hover:bg-zinc-950 hover:text-white"
-          >
-            <FiEye size={16} />
-            View product
-          </button>
-        </div>
-      </div>
-
-      {/* Product information */}
-      <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-start justify-between gap-3">
-          <button
-            type="button"
-            onClick={openProductDetails}
-            className="min-w-0 text-left"
-          >
-            <h3 className="truncate text-sm font-bold text-zinc-950 transition hover:text-zinc-600">
-              {productName}
-            </h3>
-          </button>
-
-          <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-zinc-500">
-            {product.category || "Roto"}
-          </span>
-        </div>
-
-        {/* Rating: shown only for normal Roto products */}
-        {!isExternalProduct && (
-          <div className="mt-3 flex items-center gap-1.5">
-            <div className="flex items-center">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <FiStar
-                  key={index}
-                  size={13}
-                  className={
-                    index < rating
-                      ? "fill-amber-400 text-amber-400"
-                      : "text-zinc-300"
-                  }
-                />
-              ))}
-            </div>
-
-            <span className="text-xs font-medium text-zinc-500">
-              ({Number(product.rating || 0).toFixed(1)})
-            </span>
+        {/* Rating badge */}
+        {!isExternal && rating > 0 && (
+          <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-sm bg-white/90 px-1.5 py-0.5 text-xs font-bold text-zinc-900">
+            <span>{rating.toFixed(1)}</span>
+            <FiStar size={12} className="fill-teal-600 text-teal-600" />
+            {ratingCount > 0 && (
+              <>
+                <span className="text-zinc-300">|</span>
+                <span>{formatCount(ratingCount)}</span>
+              </>
+            )}
           </div>
         )}
 
-        {/* Product action */}
-        <div className="mt-5">
-          {isExternalProduct ? (
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-zinc-500">
-                Available through partner
-              </p>
+        {/* Mobile wishlist (no hover on touch screens) */}
+        <button
+          type="button"
+          onClick={handleWishlist}
+          aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
+          className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-white/90 md:hidden"
+        >
+          <FiHeart
+            size={16}
+            className={wished ? "text-red-500" : "text-zinc-700"}
+            fill={wished ? "currentColor" : "none"}
+          />
+        </button>
+      </div>
 
-              <a
-                href={product.externalUrl}
-                target="_blank"
-                rel="nofollow sponsored noopener noreferrer"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-orange-500 px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-orange-600"
-              >
-                <FiShoppingBag size={15} />
-                {externalButtonText}
-                <span aria-hidden="true">↗</span>
-              </a>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-lg font-black tracking-tight text-zinc-950">
-                {formatPrice(product.price)}
-              </p>
+      {/* Info area: fixed height so hover swap doesn't shift the grid */}
+      <div className="relative h-[92px] px-2.5 pt-2.5 md:h-[104px]">
+        {/* Default info */}
+        <div className="md:group-hover:invisible">
+          <h3 className="truncate text-base font-bold text-zinc-900">
+            {brand}
+          </h3>
+          <p className="mb-1 truncate text-sm text-zinc-500">{name}</p>
+          {priceRow}
+        </div>
 
-              {cartItem ? (
-                <div className="inline-grid grid-cols-[30px_34px_30px] items-center overflow-hidden rounded-full border border-zinc-300">
-                  <button
-                    type="button"
-                    onClick={() => decreaseQty(product._id)}
-                    aria-label={`Decrease quantity of ${productName}`}
-                    className="grid size-[30px] place-items-center text-zinc-900 transition hover:bg-zinc-100"
-                  >
-                    <FiMinus size={14} />
-                  </button>
-
-                  <span className="text-center text-xs font-extrabold text-zinc-950">
-                    {cartItem.quantity}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => increaseQty(product._id)}
-                    aria-label={`Increase quantity of ${productName}`}
-                    className="grid size-[30px] place-items-center text-zinc-900 transition hover:bg-zinc-100"
-                  >
-                    <FiPlus size={14} />
-                  </button>
-                </div>
-              ) : (
+        {/* Hover info (desktop only) */}
+        <div className="absolute inset-0 hidden flex-col bg-white px-2.5 pb-2 pt-2 md:group-hover:flex">
+          {/* Image dots */}
+          {images.length > 1 && (
+            <div className="mb-2 flex justify-center gap-1.5">
+              {images.map((_, i) => (
                 <button
+                  key={i}
                   type="button"
-                  onClick={handleAddToCart}
-                  className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-zinc-800"
-                >
-                  <FiShoppingBag size={15} />
-                  Add
-                </button>
-              )}
+                  aria-label={`Show image ${i + 1}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveImage(i);
+                  }}
+                  className={`size-1.5 rounded-full ${
+                    i === activeImage ? "bg-pink-500" : "bg-zinc-300"
+                  }`}
+                />
+              ))}
             </div>
           )}
+
+          {isExternal ? (
+            <a
+              href={product.externalUrl}
+              target="_blank"
+              rel="nofollow sponsored noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex h-9 items-center justify-center gap-2 rounded-sm bg-orange-500 text-xs font-bold text-white hover:bg-orange-600"
+            >
+              <FiShoppingBag size={14} />
+              {externalText} ↗
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handleWishlist}
+              className="flex h-9 items-center justify-center gap-2 rounded-sm border border-zinc-300 text-xs font-bold uppercase tracking-wide text-zinc-800 hover:border-zinc-800"
+            >
+              <FiHeart
+                size={16}
+                className={wished ? "text-red-500" : ""}
+                fill={wished ? "currentColor" : "none"}
+              />
+              {wished ? "Wishlisted" : "Wishlist"}
+            </button>
+          )}
+
+          {sizes && !isExternal ? (
+            <p className="mt-2 truncate text-sm text-zinc-500">
+              Sizes: {sizes}
+            </p>
+          ) : (
+            <p className="mt-2 truncate text-sm text-zinc-500">{name}</p>
+          )}
+          <div className="mt-0.5">{priceRow}</div>
         </div>
       </div>
     </article>

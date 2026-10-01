@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  FiArrowRight,
+  FiArrowUpRight,
+  FiChevronDown,
   FiHeart,
   FiMapPin,
   FiMenu,
@@ -16,42 +19,43 @@ import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { useLocation } from "../../context/LocationContext";
 import { useWishlist } from "../../context/WishlistContext";
+import { departmentData } from "../../data/departmentData";
 import { searchProducts } from "../../services/productService";
 import CartDrawer from "../cart/CartDrawer";
 
-// Pages that start with a full-bleed hero image behind the header.
-// Add more routes here if other pages get a hero too.
-const TRANSPARENT_ROUTES = ["/"];
-
-// Logos in /public/images. Change the white one if your file is named differently.
-const LOGO_DEFAULT = "/images/roto_logo_transparent.png"; // solid header
-const LOGO_WHITE = "/images/Roto-transparent-white-logo.png"; // transparent header
+const LOGO_DEFAULT = "/images/roto_logo_transparent.png";
+const LOGO_WHITE = "/images/Roto-transparent-white-logo.png";
 
 const navLinks = [
   {
-    name: "Bags",
-    href: "/category/bags",
+    name: "Men",
+    href: "/category/men",
+    department: "men",
   },
   {
-    name: "Slings",
-    href: "/category/sling",
+    name: "Women",
+    href: "/category/women",
+    department: "women",
+  },
+  {
+    name: "Kids",
+    href: "/category/kids",
+    department: "kids",
+  },
+  {
+    name: "Home",
+    href: "/category/home",
+    department: "home",
   },
   {
     name: "Accessories",
     href: "/category/accessories",
+    department: "accessories",
   },
   {
-    name: "Electronics",
-    href: "/category/electronics",
-  },
-  {
-    name: "Shoes",
-    href: "/category/shoes",
-  },
-  {
-    name: "New Deals",
-    href: "/category/new",
-    isNew: true,
+    name: "All Products",
+    href: "/category/all",
+    department: "all",
   },
 ];
 
@@ -61,6 +65,19 @@ function formatPrice(price) {
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(Number(price || 0));
+}
+
+function getSearchProductMeta(product) {
+  const isExternalProduct =
+    product.purchaseMode === "EXTERNAL_LINK" || product.source === "AMAZON";
+
+  if (isExternalProduct) {
+    return product.source === "AMAZON"
+      ? "Explore on Amazon"
+      : "External product";
+  }
+
+  return formatPrice(product.price);
 }
 
 export default function Header() {
@@ -77,6 +94,8 @@ export default function Header() {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [openDesktopDepartment, setOpenDesktopDepartment] = useState("");
+  const [openMobileDepartment, setOpenMobileDepartment] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -85,25 +104,32 @@ export default function Header() {
   const accountMenuRef = useRef(null);
   const searchRef = useRef(null);
 
-  const hasHero = TRANSPARENT_ROUTES.includes(pathname);
+  const hasHero = pathname === "/" || pathname.startsWith("/category/");
 
-  // Transparent only at the very top of a hero page.
-  // The open mobile menu needs a solid background to stay readable.
   const isTransparent = hasHero && !isScrolled && !isMobileMenuOpen;
 
   const closeAllMenus = () => {
     setIsMobileMenuOpen(false);
     setIsAccountMenuOpen(false);
     setIsSearchOpen(false);
+    setOpenMobileDepartment("");
+    setOpenDesktopDepartment("");
   };
 
-  /* Track scroll position (also runs once on mount, so a refresh that
-     restores a scrolled position shows the right state immediately) */
+  useEffect(() => {
+    setOpenDesktopDepartment("");
+    setOpenMobileDepartment("");
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
 
     handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    window.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
 
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -146,8 +172,8 @@ export default function Header() {
         const products = data?.products || data || [];
 
         setSearchResults(products);
-      } catch (error) {
-        console.error("Product search error:", error);
+      } catch (requestError) {
+        console.error("Product search error:", requestError);
         setSearchResults([]);
       } finally {
         setIsSearchLoading(false);
@@ -187,7 +213,6 @@ export default function Header() {
     return "Set location";
   };
 
-  /* Style variants: light-on-image when transparent, dark-on-white when solid */
   const iconButtonClass = isTransparent
     ? "text-white hover:bg-white/15"
     : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950";
@@ -215,7 +240,6 @@ export default function Header() {
             : "border-zinc-200 bg-white shadow-sm shadow-black/5"
         }`}
       >
-        {/* Soft top shade so white text stays readable on bright images */}
         <div
           aria-hidden="true"
           className={`pointer-events-none absolute inset-x-0 top-0 -z-10 h-28 bg-gradient-to-b from-black/50 to-transparent transition-opacity duration-300 ${
@@ -224,7 +248,6 @@ export default function Header() {
         />
 
         <div className="mx-auto flex h-[72px] max-w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          {/* Left: Mobile menu, logo, location */}
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
@@ -234,7 +257,7 @@ export default function Header() {
                   : "Open navigation menu"
               }
               aria-expanded={isMobileMenuOpen}
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              onClick={() => setIsMobileMenuOpen((current) => !current)}
               className={`grid size-10 place-items-center rounded-full transition lg:hidden ${chipClass}`}
             >
               {isMobileMenuOpen ? <FiX size={21} /> : <FiMenu size={21} />}
@@ -246,7 +269,6 @@ export default function Header() {
               aria-label="ROTO home"
               className="relative block shrink-0"
             >
-              {/* Regular logo: sets the size and shows once the header is solid */}
               <img
                 src={LOGO_DEFAULT}
                 alt="ROTO"
@@ -255,7 +277,6 @@ export default function Header() {
                 }`}
               />
 
-              {/* White logo: shown while the header is transparent over the hero */}
               <img
                 src={LOGO_WHITE}
                 alt=""
@@ -281,30 +302,126 @@ export default function Header() {
             </button>
           </div>
 
-          {/* Desktop category navigation */}
-          <nav className="hidden items-center gap-6 lg:flex">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                className={`relative text-xs font-extrabold uppercase tracking-[0.08em] transition ${navLinkClass}`}
-              >
-                {link.name}
+          <nav className="hidden items-center gap-5 lg:flex">
+            {navLinks.map((link) => {
+              const department = departmentData[link.department];
+              const hasSubcategories =
+                department?.subcategories &&
+                department.subcategories.length > 0;
 
-                {link.isNew && (
-                  <span
-                    className={`absolute -right-8 -top-3 rounded-full px-1.5 py-0.5 text-[8px] font-black tracking-normal transition-colors duration-300 ${badgeClass}`}
+              if (!hasSubcategories) {
+                return (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    onClick={closeAllMenus}
+                    className={`relative text-xs font-extrabold uppercase tracking-[0.08em] transition ${navLinkClass}`}
                   >
-                    New
-                  </span>
-                )}
-              </Link>
-            ))}
+                    {link.name}
+                  </Link>
+                );
+              }
+
+              return (
+                <div
+                  key={link.name}
+                  className="relative"
+                  onMouseEnter={() => setOpenDesktopDepartment(link.department)}
+                  onMouseLeave={() => setOpenDesktopDepartment("")}
+                >
+                  <div className="flex items-center">
+                    <Link
+                      href={link.href}
+                      onClick={closeAllMenus}
+                      className={`text-xs font-extrabold uppercase tracking-[0.08em] transition ${navLinkClass}`}
+                    >
+                      {link.name}
+                    </Link>
+
+                    <button
+                      type="button"
+                      aria-label={`Toggle ${link.name} categories`}
+                      aria-expanded={openDesktopDepartment === link.department}
+                      onClick={() =>
+                        setOpenDesktopDepartment((current) =>
+                          current === link.department ? "" : link.department,
+                        )
+                      }
+                      className={`ml-1 grid size-5 place-items-center rounded-full transition ${navLinkClass}`}
+                    >
+                      <FiChevronDown
+                        size={13}
+                        className={`transition duration-200 ${
+                          openDesktopDepartment === link.department
+                            ? "rotate-180"
+                            : ""
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {openDesktopDepartment === link.department && (
+                    <div className="absolute left-1/2 top-full z-50 w-[540px] -translate-x-1/2 pt-4">
+                      <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white p-3 shadow-2xl">
+                        <Link
+                          href="/category/all"
+                          onClick={closeAllMenus}
+                          className="flex items-center justify-between rounded-2xl bg-zinc-950 px-5 py-4 text-white transition hover:bg-zinc-800"
+                        >
+                          <div>
+                            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-amber-300">
+                              ROTO collection
+                            </p>
+                          </div>
+
+                          <FiArrowUpRight size={20} className="shrink-0" />
+                        </Link>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          {department.subcategories.map((subcategory) => (
+                            <Link
+                              key={subcategory.slug}
+                              href={`/category/${link.department}/${subcategory.slug}`}
+                              onClick={closeAllMenus}
+                              className="group/item rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-4 transition hover:border-zinc-300 hover:bg-white hover:shadow-sm"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-black text-zinc-950 transition group-hover/item:text-amber-700">
+                                    {subcategory.title}
+                                  </p>
+
+                                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-500">
+                                    {subcategory.description}
+                                  </p>
+                                </div>
+
+                                <FiArrowUpRight
+                                  size={16}
+                                  className="mt-0.5 shrink-0 text-zinc-400 transition group-hover/item:-translate-y-0.5 group-hover/item:translate-x-0.5 group-hover/item:text-zinc-950"
+                                />
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+
+                        <Link
+                          href={link.href}
+                          onClick={closeAllMenus}
+                          className="mt-3 flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-xs font-extrabold uppercase tracking-[0.1em] text-zinc-800 transition hover:bg-zinc-100"
+                        >
+                          View all {link.name}
+                          <FiArrowRight size={15} />
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </nav>
 
-          {/* Right controls */}
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            {/* Wishlist */}
             <Link
               href="/wishlist"
               aria-label="Open wishlist"
@@ -319,13 +436,12 @@ export default function Header() {
               )}
             </Link>
 
-            {/* Search */}
             <div ref={searchRef} className="relative">
               <button
                 type="button"
                 aria-label="Search products"
                 onClick={() => {
-                  setIsSearchOpen(!isSearchOpen);
+                  setIsSearchOpen((current) => !current);
                   setIsAccountMenuOpen(false);
                 }}
                 className={`grid size-10 place-items-center rounded-full transition ${iconButtonClass}`}
@@ -348,7 +464,8 @@ export default function Header() {
                   <div className="max-h-80 overflow-y-auto">
                     {!searchTerm.trim() && (
                       <p className="p-5 text-center text-sm text-zinc-500">
-                        Search for bags, slings, shoes, and accessories.
+                        Search Men, Women, Kids, Home, accessories, brands, or
+                        products.
                       </p>
                     )}
 
@@ -371,15 +488,16 @@ export default function Header() {
                         <button
                           key={product._id}
                           type="button"
-                          onClick={() =>
-                            handleSearchProductClick(product._id)
-                          }
+                          onClick={() => handleSearchProductClick(product._id)}
                           className="flex w-full items-center gap-3 border-b border-zinc-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-zinc-50"
                         >
                           <div className="size-12 shrink-0 overflow-hidden rounded-xl bg-zinc-100">
                             <img
-                              src={product.image}
-                              alt={product.name}
+                              src={
+                                product.image ||
+                                "/images/product-placeholder.png"
+                              }
+                              alt={product.name || "Product"}
                               className="size-full object-cover"
                             />
                           </div>
@@ -390,7 +508,7 @@ export default function Header() {
                             </p>
 
                             <p className="mt-1 text-xs text-zinc-500">
-                              {formatPrice(product.price)}
+                              {getSearchProductMeta(product)}
                             </p>
                           </div>
                         </button>
@@ -400,7 +518,6 @@ export default function Header() {
               )}
             </div>
 
-            {/* Cart / checkout bag */}
             <button
               type="button"
               aria-label="Open shopping bag"
@@ -421,13 +538,12 @@ export default function Header() {
               )}
             </button>
 
-            {/* Account */}
             <div ref={accountMenuRef} className="relative">
               <button
                 type="button"
                 aria-label="Open account menu"
                 onClick={() => {
-                  setIsAccountMenuOpen(!isAccountMenuOpen);
+                  setIsAccountMenuOpen((current) => !current);
                   setIsSearchOpen(false);
                 }}
                 className={`grid size-10 place-items-center rounded-full transition ${iconButtonClass}`}
@@ -512,9 +628,8 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile navigation */}
         {isMobileMenuOpen && (
-          <div className="border-t border-zinc-200 bg-white px-4 py-5 lg:hidden">
+          <div className="max-h-[calc(100vh-72px)] overflow-y-auto border-t border-zinc-200 bg-white px-4 py-5 lg:hidden">
             <button
               type="button"
               onClick={detectLocation}
@@ -525,22 +640,75 @@ export default function Header() {
             </button>
 
             <nav className="flex flex-col">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  onClick={closeAllMenus}
-                  className="flex items-center justify-between border-b border-zinc-100 py-4 text-sm font-extrabold uppercase tracking-[0.06em] text-zinc-950"
-                >
-                  {link.name}
+              {navLinks.map((link) => {
+                const department = departmentData[link.department];
+                const hasSubcategories =
+                  department?.subcategories &&
+                  department.subcategories.length > 0;
 
-                  {link.isNew && (
-                    <span className="rounded-full bg-zinc-950 px-2 py-1 text-[9px] text-white">
-                      New
-                    </span>
-                  )}
-                </Link>
-              ))}
+                if (!hasSubcategories) {
+                  return (
+                    <Link
+                      key={link.name}
+                      href={link.href}
+                      onClick={closeAllMenus}
+                      className="border-b border-zinc-100 py-4 text-sm font-extrabold uppercase tracking-[0.06em] text-zinc-950"
+                    >
+                      {link.name}
+                    </Link>
+                  );
+                }
+
+                const isOpen = openMobileDepartment === link.department;
+
+                return (
+                  <div
+                    key={link.name}
+                    className="border-b border-zinc-100 py-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <Link
+                        href={link.href}
+                        onClick={closeAllMenus}
+                        className="py-3 text-sm font-extrabold uppercase tracking-[0.06em] text-zinc-950"
+                      >
+                        {link.name}
+                      </Link>
+
+                      <button
+                        type="button"
+                        aria-label={`Toggle ${link.name} categories`}
+                        onClick={() =>
+                          setOpenMobileDepartment((current) =>
+                            current === link.department ? "" : link.department,
+                          )
+                        }
+                        className="grid size-10 place-items-center rounded-full text-zinc-700 transition hover:bg-zinc-100"
+                      >
+                        <FiChevronDown
+                          size={18}
+                          className={`transition ${isOpen ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                    </div>
+
+                    {isOpen && (
+                      <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-zinc-50 p-3">
+                        {department.subcategories.map((subcategory) => (
+                          <Link
+                            key={subcategory.slug}
+                            href={`/category/${link.department}/${subcategory.slug}`}
+                            onClick={closeAllMenus}
+                            className="rounded-lg bg-white px-3 py-3 text-xs font-bold text-zinc-700 shadow-sm transition hover:bg-zinc-950 hover:text-white"
+                          >
+                            {subcategory.title}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               <Link
                 href="/my-orders"
@@ -554,10 +722,7 @@ export default function Header() {
         )}
       </header>
 
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-      />
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </>
   );
 }

@@ -75,3 +75,28 @@ export async function requireAdmin(request) {
 
   return user;
 }
+
+/*
+  This helper is for endpoints that work for both customers and Admins.
+
+  No token:
+  → false
+
+  Invalid token:
+  → false
+
+  Valid customer token:
+  → false
+
+  Valid Admin token:
+  → true
+*/
+export async function isAdminRequest(request) {
+  try {
+    const user = await requireUser(request);
+
+    return user.role === "admin";
+  } catch {
+    return false;
+  }
+}

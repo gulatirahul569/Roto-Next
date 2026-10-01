@@ -5,6 +5,17 @@ import Product from "../../../../models/Product";
 
 export const runtime = "nodejs";
 
+const VALID_SOURCES = ["INVENTORY", "VENDOR", "AMAZON"];
+
+const VALID_DEPARTMENTS = [
+  "ALL",
+  "MEN",
+  "WOMEN",
+  "KIDS",
+  "HOME",
+  "ACCESSORIES",
+];
+
 function createSlug(value = "") {
   return String(value)
     .toLowerCase()
@@ -14,23 +25,20 @@ function createSlug(value = "") {
     .replace(/(^-|-$)/g, "");
 }
 
-function createCategorySlug(value = "") {
-  const slug = createSlug(value);
-  return slug || "all";
+function stringValue(value = "") {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function numberOrDefault(value, fallback = 0) {
   const number = Number(value);
-  return Number.isFinite(number) ? number : fallback;
-}
 
-function stringValue(value = "") {
-  return typeof value === "string" ? value.trim() : "";
+  return Number.isFinite(number) ? number : fallback;
 }
 
 function isValidUrl(value) {
   try {
     const url = new URL(value);
+
     return url.protocol === "https:" || url.protocol === "http:";
   } catch {
     return false;
@@ -52,13 +60,29 @@ function isAmazonUrl(value) {
   }
 }
 
+function createCategorySlug(value = "") {
+  return createSlug(value) || "all";
+}
+
+function getDepartment(value) {
+  const department = String(value || "ALL")
+    .trim()
+    .toUpperCase();
+
+  return VALID_DEPARTMENTS.includes(department) ? department : "ALL";
+}
+
+function getSubcategory(value) {
+  return createSlug(value);
+}
+
 export async function POST(request) {
   try {
     await requireAdmin(request);
 
     const body = await request.json();
 
-    const source = ["INVENTORY", "VENDOR", "AMAZON"].includes(body.source)
+    const source = VALID_SOURCES.includes(body.source)
       ? body.source
       : "INVENTORY";
 
@@ -75,7 +99,11 @@ export async function POST(request) {
     const name = stringValue(body.name || body.title);
     const slug = createSlug(body.slug || name);
     const category = stringValue(body.category);
+    const department = getDepartment(body.department);
+    const subcategory = getSubcategory(body.subcategory);
+
     const externalUrl = stringValue(body.externalUrl);
+    const primaryImage = stringValue(body.image);
 
     if (!name) {
       return NextResponse.json(
@@ -84,7 +112,7 @@ export async function POST(request) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -95,7 +123,7 @@ export async function POST(request) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -106,7 +134,29 @@ export async function POST(request) {
         },
         {
           status: 400,
-        }
+        },
+      );
+    }
+
+    if (department !== "ALL" && !subcategory) {
+      return NextResponse.json(
+        {
+          message: "Please select a subcategory for this department.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (!primaryImage) {
+      return NextResponse.json(
+        {
+          message: "A main product image URL is required.",
+        },
+        {
+          status: 400,
+        },
       );
     }
 
@@ -117,7 +167,7 @@ export async function POST(request) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -128,7 +178,7 @@ export async function POST(request) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -140,20 +190,7 @@ export async function POST(request) {
         },
         {
           status: 400,
-        }
-      );
-    }
-
-    const primaryImage = stringValue(body.image);
-
-    if (!primaryImage) {
-      return NextResponse.json(
-        {
-          message: "A main product image URL is required.",
         },
-        {
-          status: 400,
-        }
       );
     }
 
@@ -164,56 +201,61 @@ export async function POST(request) {
       : [];
 
     const images = Array.from(
-      new Set([primaryImage, ...additionalImages])
+      new Set([primaryImage, ...additionalImages]),
     );
+
+    const isExternalProduct = purchaseMode === "EXTERNAL_LINK";
 
     const productData = {
       name,
       slug,
+
       description: stringValue(body.description),
       shortDescription: stringValue(body.shortDescription),
       brand: stringValue(body.brand),
+
       category,
-      newCategory: stringValue(body.newCategory) || createCategorySlug(category),
+      newCategory:
+        stringValue(body.newCategory) || createCategorySlug(category),
+
+      department,
+      subcategory,
+
       rating: Math.max(
         0,
-        Math.min(5, numberOrDefault(body.rating, 0))
+        Math.min(5, numberOrDefault(body.rating, 0)),
       ),
 
       image: primaryImage,
       images,
 
       currency: "INR",
+
       isActive: body.isActive !== false,
       isFeatured: body.isFeatured === true,
 
       source,
       purchaseMode,
 
-      price:
-        purchaseMode === "EXTERNAL_LINK"
-          ? 0
-          : Math.max(0, numberOrDefault(body.price, 0)),
+      price: isExternalProduct
+        ? 0
+        : Math.max(0, numberOrDefault(body.price, 0)),
 
       compareAtPrice:
-        purchaseMode === "EXTERNAL_LINK" || !body.compareAtPrice
+        isExternalProduct || !body.compareAtPrice
           ? null
           : Math.max(0, numberOrDefault(body.compareAtPrice, 0)),
 
-      stock:
-        purchaseMode === "EXTERNAL_LINK"
-          ? 0
-          : Math.max(0, Math.floor(numberOrDefault(body.stock, 0))),
+      stock: isExternalProduct
+        ? 0
+        : Math.max(0, Math.floor(numberOrDefault(body.stock, 0))),
 
-      externalUrl:
-        purchaseMode === "EXTERNAL_LINK"
-          ? externalUrl
-          : "",
+      externalUrl: isExternalProduct ? externalUrl : "",
 
       externalButtonText:
         source === "AMAZON"
           ? "Explore on Amazon"
-          : purchaseMode === "EXTERNAL_LINK"
+          : isExternalProduct
             ? stringValue(body.externalButtonText) || "Explore Product"
             : "",
 
@@ -232,7 +274,7 @@ export async function POST(request) {
           source === "VENDOR"
             ? stringValue(
                 body.vendor?.vendorProductId ||
-                  body.vendorProductId
+                  body.vendorProductId,
               )
             : "",
 
@@ -268,7 +310,7 @@ export async function POST(request) {
       },
       {
         status: 201,
-      }
+      },
     );
   } catch (error) {
     console.error("CREATE PRODUCT ERROR:", error);
@@ -281,7 +323,7 @@ export async function POST(request) {
         },
         {
           status: 409,
-        }
+        },
       );
     }
 
@@ -291,7 +333,7 @@ export async function POST(request) {
       },
       {
         status: error.status || 500,
-      }
+      },
     );
   }
 }

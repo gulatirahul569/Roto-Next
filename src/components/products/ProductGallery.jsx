@@ -21,19 +21,21 @@ export default function ProductGallery({
   onToggleWishlist,
 }) {
   const gallery = useMemo(() => {
-    const productImages =
-      Array.isArray(product?.images) && product.images.length > 0
-        ? product.images
-        : [product?.image];
+    const allProductImages = [
+      product?.image,
+      ...(Array.isArray(product?.images) ? product.images : []),
+    ];
 
-    const validImages = productImages
+    const validImages = allProductImages
       .map(getImageUrl)
       .filter(Boolean);
 
-    return validImages.length > 0
-      ? validImages
+    const uniqueImages = Array.from(new Set(validImages));
+
+    return uniqueImages.length > 0
+      ? uniqueImages
       : ["/images/placeholders/product-placeholder.png"];
-  }, [product]);
+  }, [product?.image, product?.images]);
 
   const [selectedImage, setSelectedImage] = useState(gallery[0]);
 
@@ -79,9 +81,10 @@ export default function ProductGallery({
               type="button"
               onClick={() => setSelectedImage(image)}
               aria-label={`Show product image ${index + 1}`}
+              aria-pressed={selectedImage === image}
               className={`size-20 shrink-0 overflow-hidden rounded-xl border-2 bg-white p-1 transition sm:size-24 ${
                 selectedImage === image
-                  ? "border-zinc-950"
+                  ? "border-zinc-950 ring-2 ring-zinc-950/10"
                   : "border-transparent hover:border-zinc-300"
               }`}
             >

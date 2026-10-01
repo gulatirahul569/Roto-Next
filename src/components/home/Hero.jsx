@@ -29,7 +29,7 @@ const slides = [
     description:
       "The mini sling carries your essentials without the bulk, and sits close to the body all day.",
     buttonText: "Get the mini",
-    route: "/category/sling",
+    route: "/category/women",
     align: "left",
   },
   {
@@ -43,7 +43,7 @@ const slides = [
     description:
       "Pockets, straps and pouches that keep everything in reach and out of your way.",
     buttonText: "Find your setup",
-    route: "/category/bags",
+    route: "/category/men",
     align: "center",
   },
 ];

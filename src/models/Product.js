@@ -93,6 +93,16 @@ const ProductSchema = new mongoose.Schema(
       trim: true,
     },
 
+    /*
+      Existing product type / legacy product grouping.
+
+      Examples:
+      Casual
+      Premium
+      Laptop
+      Travel
+      Sports
+    */
     category: {
       type: String,
       default: "",
@@ -100,11 +110,56 @@ const ProductSchema = new mongoose.Schema(
       index: true,
     },
 
+    /*
+      Existing legacy collection field.
+
+      It stays in the model so your current pages and old product data
+      continue to work after this upgrade.
+    */
     newCategory: {
       type: String,
       default: "all",
       trim: true,
       lowercase: true,
+    },
+
+    /*
+      New top-level navigation department.
+
+      Examples:
+      MEN
+      WOMEN
+      KIDS
+      HOME
+      ACCESSORIES
+    */
+    department: {
+      type: String,
+      enum: ["ALL", "MEN", "WOMEN", "KIDS", "HOME", "ACCESSORIES"],
+      default: "ALL",
+      trim: true,
+      uppercase: true,
+      index: true,
+    },
+
+    /*
+      New department collection slug.
+
+      Examples:
+      t-shirts
+      shirts
+      pants
+      handbags
+      watches
+      decor
+      toys
+    */
+    subcategory: {
+      type: String,
+      default: "",
+      trim: true,
+      lowercase: true,
+      index: true,
     },
 
     rating: {
@@ -153,6 +208,7 @@ const ProductSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+      index: true,
     },
 
     isFeatured: {
@@ -200,11 +256,33 @@ const ProductSchema = new mongoose.Schema(
   },
 );
 
+/*
+  Makes department + subcategory filtering fast.
+
+  This is used by routes like:
+
+  /api/products?department=MEN&subcategory=t-shirts
+*/
+ProductSchema.index({
+  isActive: 1,
+  department: 1,
+  subcategory: 1,
+});
+
 ProductSchema.pre("validate", function () {
+  this.department = String(this.department || "ALL")
+    .trim()
+    .toUpperCase();
+
+  this.subcategory = String(this.subcategory || "")
+    .trim()
+    .toLowerCase();
+
   if (this.source === "AMAZON") {
     this.purchaseMode = "EXTERNAL_LINK";
     this.stock = 0;
     this.price = 0;
+    this.compareAtPrice = null;
 
     if (!this.externalButtonText) {
       this.externalButtonText = "Explore on Amazon";

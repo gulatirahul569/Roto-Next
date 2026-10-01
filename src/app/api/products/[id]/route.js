@@ -6,6 +6,17 @@ import Product from "../../../../models/Product";
 
 export const runtime = "nodejs";
 
+const VALID_SOURCES = ["INVENTORY", "VENDOR", "AMAZON"];
+
+const VALID_DEPARTMENTS = [
+  "ALL",
+  "MEN",
+  "WOMEN",
+  "KIDS",
+  "HOME",
+  "ACCESSORIES",
+];
+
 function createSlug(value = "") {
   return String(value)
     .toLowerCase()
@@ -16,8 +27,7 @@ function createSlug(value = "") {
 }
 
 function createCategorySlug(value = "") {
-  const slug = createSlug(value);
-  return slug || "all";
+  return createSlug(value) || "all";
 }
 
 function stringValue(value = "") {
@@ -26,12 +36,14 @@ function stringValue(value = "") {
 
 function numberOrDefault(value, fallback = 0) {
   const number = Number(value);
+
   return Number.isFinite(number) ? number : fallback;
 }
 
 function isValidUrl(value) {
   try {
     const url = new URL(value);
+
     return url.protocol === "https:" || url.protocol === "http:";
   } catch {
     return false;
@@ -57,6 +69,20 @@ function isValidProductId(id) {
   return mongoose.Types.ObjectId.isValid(id);
 }
 
+function getDepartment(value, fallback = "ALL") {
+  const department = String(value || fallback)
+    .trim()
+    .toUpperCase();
+
+  return VALID_DEPARTMENTS.includes(department)
+    ? department
+    : fallback;
+}
+
+function getSubcategory(value) {
+  return createSlug(value);
+}
+
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
@@ -68,13 +94,18 @@ export async function GET(request, { params }) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
     await connectDatabase();
 
-    const product = await Product.findById(id);
+    const product = await Product.findOne({
+      _id: id,
+      isActive: {
+        $ne: false,
+      },
+    });
 
     if (!product) {
       return NextResponse.json(
@@ -83,7 +114,7 @@ export async function GET(request, { params }) {
         },
         {
           status: 404,
-        }
+        },
       );
     }
 
@@ -93,7 +124,7 @@ export async function GET(request, { params }) {
       },
       {
         status: 200,
-      }
+      },
     );
   } catch (error) {
     console.error("GET PRODUCT ERROR:", error);
@@ -104,7 +135,7 @@ export async function GET(request, { params }) {
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }
@@ -122,7 +153,7 @@ export async function PUT(request, { params }) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -139,11 +170,11 @@ export async function PUT(request, { params }) {
         },
         {
           status: 404,
-        }
+        },
       );
     }
 
-    const source = ["INVENTORY", "VENDOR", "AMAZON"].includes(body.source)
+    const source = VALID_SOURCES.includes(body.source)
       ? body.source
       : product.source || "INVENTORY";
 
@@ -163,6 +194,15 @@ export async function PUT(request, { params }) {
 
     const category = stringValue(body.category || product.category);
 
+    const department = getDepartment(
+      body.department,
+      product.department || "ALL",
+    );
+
+    const subcategory = getSubcategory(
+      body.subcategory ?? product.subcategory,
+    );
+
     const externalUrl =
       purchaseMode === "EXTERNAL_LINK"
         ? stringValue(body.externalUrl)
@@ -175,7 +215,7 @@ export async function PUT(request, { params }) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -186,7 +226,7 @@ export async function PUT(request, { params }) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -197,7 +237,18 @@ export async function PUT(request, { params }) {
         },
         {
           status: 400,
-        }
+        },
+      );
+    }
+
+    if (department !== "ALL" && !subcategory) {
+      return NextResponse.json(
+        {
+          message: "Please select a subcategory for this department.",
+        },
+        {
+          status: 400,
+        },
       );
     }
 
@@ -208,7 +259,7 @@ export async function PUT(request, { params }) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -219,7 +270,7 @@ export async function PUT(request, { params }) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -231,7 +282,7 @@ export async function PUT(request, { params }) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -244,7 +295,7 @@ export async function PUT(request, { params }) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -256,23 +307,30 @@ export async function PUT(request, { params }) {
       new Set(
         [image, ...requestedImages]
           .map((item) => stringValue(item))
-          .filter(Boolean)
-      )
+          .filter(Boolean),
+      ),
     );
+
+    const isExternalProduct = purchaseMode === "EXTERNAL_LINK";
 
     product.name = name;
     product.slug = slug;
+
     product.description = stringValue(body.description);
     product.shortDescription = stringValue(body.shortDescription);
     product.brand = stringValue(body.brand);
+
     product.category = category;
 
     product.newCategory =
       stringValue(body.newCategory) || createCategorySlug(category);
 
+    product.department = department;
+    product.subcategory = subcategory;
+
     product.rating = Math.max(
       0,
-      Math.min(5, numberOrDefault(body.rating, product.rating || 0))
+      Math.min(5, numberOrDefault(body.rating, product.rating || 0)),
     );
 
     product.image = image;
@@ -293,30 +351,28 @@ export async function PUT(request, { params }) {
     product.source = source;
     product.purchaseMode = purchaseMode;
 
-    product.price =
-      purchaseMode === "EXTERNAL_LINK"
-        ? 0
-        : Math.max(0, numberOrDefault(body.price, product.price || 0));
+    product.price = isExternalProduct
+      ? 0
+      : Math.max(0, numberOrDefault(body.price, product.price || 0));
 
     product.compareAtPrice =
-      purchaseMode === "EXTERNAL_LINK" || !body.compareAtPrice
+      isExternalProduct || !body.compareAtPrice
         ? null
         : Math.max(0, numberOrDefault(body.compareAtPrice));
 
-    product.stock =
-      purchaseMode === "EXTERNAL_LINK"
-        ? 0
-        : Math.max(
-            0,
-            Math.floor(numberOrDefault(body.stock, product.stock || 0))
-          );
+    product.stock = isExternalProduct
+      ? 0
+      : Math.max(
+          0,
+          Math.floor(numberOrDefault(body.stock, product.stock || 0)),
+        );
 
-    product.externalUrl = externalUrl;
+    product.externalUrl = isExternalProduct ? externalUrl : "";
 
     product.externalButtonText =
       source === "AMAZON"
         ? "Explore on Amazon"
-        : purchaseMode === "EXTERNAL_LINK"
+        : isExternalProduct
           ? stringValue(body.externalButtonText) || "Explore Product"
           : "";
 
@@ -335,7 +391,7 @@ export async function PUT(request, { params }) {
         source === "VENDOR"
           ? stringValue(
               body.vendor?.vendorProductId ||
-                body.vendorProductId
+                body.vendorProductId,
             )
           : "",
 
@@ -343,6 +399,8 @@ export async function PUT(request, { params }) {
         source === "VENDOR"
           ? stringValue(body.vendor?.vendorUrl || body.vendorUrl)
           : "",
+
+      lastSyncedAt: product.vendor?.lastSyncedAt || null,
     };
 
     product.amazon = {
@@ -368,7 +426,7 @@ export async function PUT(request, { params }) {
       },
       {
         status: 200,
-      }
+      },
     );
   } catch (error) {
     console.error("UPDATE PRODUCT ERROR:", error);
@@ -381,7 +439,7 @@ export async function PUT(request, { params }) {
         },
         {
           status: 409,
-        }
+        },
       );
     }
 
@@ -391,7 +449,7 @@ export async function PUT(request, { params }) {
       },
       {
         status: error.status || 500,
-      }
+      },
     );
   }
 }
@@ -409,7 +467,7 @@ export async function DELETE(request, { params }) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -424,7 +482,7 @@ export async function DELETE(request, { params }) {
         },
         {
           status: 404,
-        }
+        },
       );
     }
 
@@ -434,7 +492,7 @@ export async function DELETE(request, { params }) {
       },
       {
         status: 200,
-      }
+      },
     );
   } catch (error) {
     console.error("DELETE PRODUCT ERROR:", error);
@@ -445,7 +503,7 @@ export async function DELETE(request, { params }) {
       },
       {
         status: error.status || 500,
-      }
+      },
     );
   }
 }

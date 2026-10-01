@@ -1,24 +1,39 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { FiX } from "react-icons/fi";
+import {
+  departmentOptions,
+  getSubcategoryOptions,
+} from "../../../data/departmentData";
+import { createProduct } from "../../../services/productService";
 
 const initialForm = {
   title: "",
   slug: "",
+
   description: "",
   shortDescription: "",
   brand: "",
   category: "",
+
+  department: "ALL",
+  subcategory: "",
+
   image: "",
   additionalImages: "",
+
   price: "",
   compareAtPrice: "",
   stock: "",
+
   isActive: true,
   isFeatured: false,
+  isNewDrop: false,
 
   source: "INVENTORY",
   purchaseMode: "CHECKOUT",
+
   externalUrl: "",
   externalButtonText: "",
 
@@ -30,8 +45,8 @@ const initialForm = {
   amazonAsin: "",
 };
 
-function createSlug(value) {
-  return value
+function createSlug(value = "") {
+  return String(value)
     .toLowerCase()
     .trim()
     .replace(/['"]/g, "")
@@ -42,6 +57,7 @@ function createSlug(value) {
 function isValidExternalUrl(value) {
   try {
     const url = new URL(value);
+
     return url.protocol === "https:" || url.protocol === "http:";
   } catch {
     return false;
@@ -70,14 +86,31 @@ export default function AddProductPage() {
   const isVendor = form.source === "VENDOR";
   const isExternal = form.purchaseMode === "EXTERNAL_LINK";
 
-  const imageList = useMemo(() => {
-    const additionalImages = form.additionalImages
-      .split("\n")
-      .map((image) => image.trim())
-      .filter(Boolean);
+  const subcategoryOptions = useMemo(() => {
+    return getSubcategoryOptions(form.department);
+  }, [form.department]);
 
-    return [form.image.trim(), ...additionalImages].filter(Boolean);
-  }, [form.image, form.additionalImages]);
+  const additionalImageList = useMemo(() => {
+    const mainImage = form.image.trim();
+
+    return Array.from(
+      new Set(
+        form.additionalImages
+          .split("\n")
+          .map((image) => image.trim())
+          .filter(Boolean)
+          .filter((image) => image !== mainImage),
+      ),
+    );
+  }, [form.additionalImages, form.image]);
+
+  const imageList = useMemo(() => {
+    const mainImage = form.image.trim();
+
+    return Array.from(
+      new Set([mainImage, ...additionalImageList].filter(Boolean)),
+    );
+  }, [form.image, additionalImageList]);
 
   function updateField(field, value) {
     setForm((previous) => ({
@@ -93,6 +126,16 @@ export default function AddProductPage() {
       ...previous,
       title,
       slug: previous.slug || createSlug(title),
+    }));
+  }
+
+  function handleDepartmentChange(event) {
+    const department = event.target.value;
+
+    setForm((previous) => ({
+      ...previous,
+      department,
+      subcategory: "",
     }));
   }
 
@@ -146,6 +189,14 @@ export default function AddProductPage() {
     }));
   }
 
+  function removeAdditionalImage(imageToRemove) {
+    const updatedImages = additionalImageList.filter(
+      (image) => image !== imageToRemove,
+    );
+
+    updateField("additionalImages", updatedImages.join("\n"));
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -155,6 +206,7 @@ export default function AddProductPage() {
     const title = form.title.trim();
     const slug = createSlug(form.slug || form.title);
     const externalUrl = form.externalUrl.trim();
+    const mainImage = form.image.trim();
 
     if (!title) {
       setError("Please enter a product title.");
@@ -171,7 +223,12 @@ export default function AddProductPage() {
       return;
     }
 
-    if (!form.image.trim()) {
+    if (form.department !== "ALL" && !form.subcategory) {
+      setError("Please select a subcategory.");
+      return;
+    }
+
+    if (!mainImage) {
       setError("Please enter a main product image URL.");
       return;
     }
@@ -193,7 +250,7 @@ export default function AddProductPage() {
       return;
     }
 
-    if (!isAmazon && form.purchaseMode === "CHECKOUT" && !form.price) {
+    if (!isAmazon && !isExternal && !form.price) {
       setError("Please enter a price for a checkout product.");
       return;
     }
@@ -201,33 +258,44 @@ export default function AddProductPage() {
     const payload = {
       title,
       slug,
+
       description: form.description.trim(),
       shortDescription: form.shortDescription.trim(),
       brand: form.brand.trim(),
       category: form.category.trim(),
-      image: form.image.trim(),
+
+      newCategory: form.isNewDrop
+        ? "new"
+        : createSlug(form.category.trim()) || "all",
+
+      department: form.department,
+      subcategory: form.subcategory,
+
+      image: imageList[0],
       images: imageList,
 
-      price: isAmazon ? 0 : Number(form.price || 0),
+      price: isExternal ? 0 : Number(form.price || 0),
 
       compareAtPrice:
-        !isAmazon && form.compareAtPrice ? Number(form.compareAtPrice) : null,
+        !isExternal && form.compareAtPrice
+          ? Number(form.compareAtPrice)
+          : null,
 
-      stock: isAmazon || isExternal ? 0 : Number(form.stock || 0),
+      stock: isExternal ? 0 : Number(form.stock || 0),
 
       currency: "INR",
+
       isActive: form.isActive,
       isFeatured: form.isFeatured,
 
       source: form.source,
       purchaseMode: isAmazon ? "EXTERNAL_LINK" : form.purchaseMode,
 
-      externalUrl:
-        isAmazon || form.purchaseMode === "EXTERNAL_LINK" ? externalUrl : "",
+      externalUrl: isExternal ? externalUrl : "",
 
       externalButtonText: isAmazon
         ? "Explore on Amazon"
-        : form.purchaseMode === "EXTERNAL_LINK"
+        : isExternal
           ? form.externalButtonText.trim() || "Explore Product"
           : "",
 
@@ -252,20 +320,7 @@ export default function AddProductPage() {
         throw new Error("Your admin session has expired. Please log in again.");
       }
 
-      const response = await fetch("/api/products/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to create product.");
-      }
+      await createProduct(payload, token);
 
       setSuccess("Product added successfully.");
       setForm(initialForm);
@@ -280,55 +335,58 @@ export default function AddProductPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-zinc-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
         <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-wider text-orange-600">
+          <p className="text-sm font-semibold uppercase tracking-wider text-amber-700">
             Roto Admin
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold text-gray-950">Add Product</h1>
+          <h1 className="mt-2 text-3xl font-black tracking-tight text-zinc-950">
+            Add Product
+          </h1>
 
-          <p className="mt-2 text-sm text-gray-600">
-            Add Roto inventory, vendor products, or temporary Amazon affiliate
-            products.
+          <p className="mt-2 text-sm text-zinc-600">
+            Add inventory, vendor, or Amazon products and assign them to a
+            customer-facing department.
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+          <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
             {success}
           </div>
         )}
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8"
+          className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-8"
         >
-          <section className="rounded-xl border border-gray-200 p-5">
-            <h2 className="text-lg font-semibold text-gray-950">
+          <section className="rounded-xl border border-zinc-200 p-5">
+            <h2 className="text-lg font-black text-zinc-950">
               Product source
             </h2>
 
-            <p className="mt-1 text-sm text-gray-600">
-              Select where this product comes from.
+            <p className="mt-1 text-sm text-zinc-600">
+              Select whether Roto sells the product directly, through a vendor,
+              or through Amazon.
             </p>
 
             <div className="mt-4">
-              <label className="mb-2 block text-sm font-medium text-gray-800">
+              <label className="mb-2 block text-sm font-bold text-zinc-800">
                 Source
               </label>
 
               <select
                 value={form.source}
                 onChange={handleSourceChange}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
               >
                 <option value="INVENTORY">Roto inventory</option>
                 <option value="VENDOR">Vendor product</option>
@@ -337,21 +395,91 @@ export default function AddProductPage() {
             </div>
 
             {isAmazon && (
-              <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-950">
-                This product will open Amazon through your affiliate link. It
-                will not be added to the Roto cart or checkout.
+              <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm font-semibold text-orange-950">
+                This product opens Amazon through your affiliate link. It cannot
+                be added to the Roto cart or checkout.
               </div>
             )}
           </section>
 
-          <section className="rounded-xl border border-gray-200 p-5">
-            <h2 className="text-lg font-semibold text-gray-950">
+          <section className="rounded-xl border border-zinc-200 p-5">
+            <h2 className="text-lg font-black text-zinc-950">
+              Store placement
+            </h2>
+
+            <p className="mt-1 text-sm text-zinc-600">
+              This controls where customers find the product in the new store
+              navigation.
+            </p>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
+                  Department
+                </label>
+
+                <select
+                  value={form.department}
+                  onChange={handleDepartmentChange}
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
+                >
+                  <option value="ALL">All Products only</option>
+
+                  {departmentOptions.map((department) => (
+                    <option key={department.key} value={department.key}>
+                      {department.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
+                  Subcategory
+                </label>
+
+                <select
+                  value={form.subcategory}
+                  onChange={(event) =>
+                    updateField("subcategory", event.target.value)
+                  }
+                  disabled={form.department === "ALL"}
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
+                >
+                  <option value="">
+                    {form.department === "ALL"
+                      ? "Choose a department first"
+                      : "Select subcategory"}
+                  </option>
+
+                  {subcategoryOptions.map((subcategory) => (
+                    <option key={subcategory.slug} value={subcategory.slug}>
+                      {subcategory.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {form.department !== "ALL" && form.subcategory && (
+              <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                Customers will find this product at:
+                <span className="ml-1 font-black">
+                  /category/{form.department.toLowerCase()}/
+                  {form.subcategory}
+                </span>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-xl border border-zinc-200 p-5">
+            <h2 className="text-lg font-black text-zinc-950">
               Basic information
             </h2>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-gray-800">
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
                   Product title
                 </label>
 
@@ -359,13 +487,13 @@ export default function AddProductPage() {
                   type="text"
                   value={form.title}
                   onChange={handleTitleChange}
-                  placeholder="Example: American Tourister Laptop Backpack"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  placeholder="Example: Oversized Cotton T-Shirt"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-800">
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
                   Product slug
                 </label>
 
@@ -375,14 +503,14 @@ export default function AddProductPage() {
                   onChange={(event) =>
                     updateField("slug", createSlug(event.target.value))
                   }
-                  placeholder="american-tourister-backpack"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  placeholder="oversized-cotton-t-shirt"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-800">
-                  Category
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
+                  Product type
                 </label>
 
                 <input
@@ -391,13 +519,13 @@ export default function AddProductPage() {
                   onChange={(event) =>
                     updateField("category", event.target.value)
                   }
-                  placeholder="Backpacks"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  placeholder="Example: Casual"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-800">
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
                   Brand
                 </label>
 
@@ -405,13 +533,13 @@ export default function AddProductPage() {
                   type="text"
                   value={form.brand}
                   onChange={(event) => updateField("brand", event.target.value)}
-                  placeholder="Example: American Tourister"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  placeholder="Example: Roto"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-800">
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
                   Product visibility
                 </label>
 
@@ -420,7 +548,7 @@ export default function AddProductPage() {
                   onChange={(event) =>
                     updateField("isActive", event.target.value === "active")
                   }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                 >
                   <option value="active">Active and visible</option>
                   <option value="hidden">Hidden from customers</option>
@@ -429,7 +557,7 @@ export default function AddProductPage() {
             </div>
 
             <div className="mt-4">
-              <label className="mb-2 block text-sm font-medium text-gray-800">
+              <label className="mb-2 block text-sm font-bold text-zinc-800">
                 Short description
               </label>
 
@@ -441,12 +569,12 @@ export default function AddProductPage() {
                 }
                 placeholder="A short one-line product summary"
                 maxLength={300}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
               />
             </div>
 
             <div className="mt-4">
-              <label className="mb-2 block text-sm font-medium text-gray-800">
+              <label className="mb-2 block text-sm font-bold text-zinc-800">
                 Full description
               </label>
 
@@ -455,20 +583,25 @@ export default function AddProductPage() {
                 onChange={(event) =>
                   updateField("description", event.target.value)
                 }
-                placeholder="Write the product description..."
+                placeholder="Write the complete product description..."
                 rows={6}
-                className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                className="w-full resize-y rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
               />
             </div>
           </section>
 
-          <section className="rounded-xl border border-gray-200 p-5">
-            <h2 className="text-lg font-semibold text-gray-950">
+          <section className="rounded-xl border border-zinc-200 p-5">
+            <h2 className="text-lg font-black text-zinc-950">
               Product images
             </h2>
 
+            <p className="mt-1 text-sm text-zinc-600">
+              The main image appears first on the product page. Add extra image
+              URLs one per line to create the product gallery.
+            </p>
+
             <div className="mt-4">
-              <label className="mb-2 block text-sm font-medium text-gray-800">
+              <label className="mb-2 block text-sm font-bold text-zinc-800">
                 Main image URL
               </label>
 
@@ -476,13 +609,13 @@ export default function AddProductPage() {
                 type="url"
                 value={form.image}
                 onChange={(event) => updateField("image", event.target.value)}
-                placeholder="https://example.com/product-image.jpg"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                placeholder="https://example.com/product-main-image.jpg"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
               />
             </div>
 
             <div className="mt-4">
-              <label className="mb-2 block text-sm font-medium text-gray-800">
+              <label className="mb-2 block text-sm font-bold text-zinc-800">
                 Additional image URLs
               </label>
 
@@ -492,44 +625,98 @@ export default function AddProductPage() {
                   updateField("additionalImages", event.target.value)
                 }
                 placeholder={
-                  "One image URL per line\nhttps://example.com/image-2.jpg"
+                  "One image URL per line\nhttps://example.com/product-back.jpg\nhttps://example.com/product-side.jpg"
                 }
-                rows={4}
-                className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                rows={5}
+                className="w-full resize-y rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
               />
             </div>
 
-            {form.image && (
-              <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-3">
-                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Image preview
-                </p>
+            {imageList.length > 0 && (
+              <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-black text-zinc-950">
+                      Product image preview
+                    </p>
 
-                <img
-                  src={form.image}
-                  alt="Product preview"
-                  className="h-48 w-full rounded-lg object-contain"
-                  onError={(event) => {
-                    event.currentTarget.style.display = "none";
-                  }}
-                />
+                    <p className="mt-1 text-xs font-medium text-zinc-500">
+                      {imageList.length} image
+                      {imageList.length === 1 ? "" : "s"} ready for this
+                      product.
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-zinc-900 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white">
+                    First image is main
+                  </span>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                  <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+                    <img
+                      src={imageList[0]}
+                      alt="Main product preview"
+                      className="h-72 w-full object-contain p-3"
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
+                    />
+                  </div>
+
+                  <div className="grid max-h-72 grid-cols-3 content-start gap-2 overflow-y-auto pr-1">
+                    {imageList.map((image, index) => (
+                      <div
+                        key={`${image}-${index}`}
+                        className={`group relative aspect-square overflow-hidden rounded-lg border bg-white ${
+                          index === 0
+                            ? "border-zinc-950 ring-2 ring-zinc-950/10"
+                            : "border-zinc-200"
+                        }`}
+                      >
+                        <img
+                          src={image}
+                          alt={`Product preview ${index + 1}`}
+                          className="size-full object-cover"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
+                        />
+
+                        {index === 0 ? (
+                          <span className="absolute bottom-1 left-1 rounded bg-zinc-950 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white">
+                            Main
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => removeAdditionalImage(image)}
+                            aria-label={`Remove image ${index + 1}`}
+                            className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-white text-zinc-700 shadow transition hover:bg-red-500 hover:text-white"
+                          >
+                            <FiX size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </section>
 
           {isAmazon && (
             <section className="rounded-xl border border-orange-200 bg-orange-50 p-5">
-              <h2 className="text-lg font-semibold text-orange-950">
+              <h2 className="text-lg font-black text-orange-950">
                 Amazon affiliate details
               </h2>
 
               <p className="mt-1 text-sm text-orange-900">
-                Paste the Amazon Associate SiteStripe link you generated for
-                this product.
+                Paste an Amazon Associate SiteStripe link for this product.
               </p>
 
               <div className="mt-4">
-                <label className="mb-2 block text-sm font-medium text-gray-800">
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
                   Amazon affiliate link
                 </label>
 
@@ -545,8 +732,8 @@ export default function AddProductPage() {
               </div>
 
               <div className="mt-4">
-                <label className="mb-2 block text-sm font-medium text-gray-800">
-                  ASIN
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
+                  Amazon ASIN
                 </label>
 
                 <input
@@ -568,18 +755,13 @@ export default function AddProductPage() {
 
           {isVendor && (
             <section className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-              <h2 className="text-lg font-semibold text-blue-950">
+              <h2 className="text-lg font-black text-blue-950">
                 Vendor information
               </h2>
 
-              <p className="mt-1 text-sm text-blue-900">
-                These details prepare the product for future vendor CSV or API
-                stock synchronization.
-              </p>
-
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-800">
+                  <label className="mb-2 block text-sm font-bold text-zinc-800">
                     Vendor name
                   </label>
 
@@ -589,13 +771,13 @@ export default function AddProductPage() {
                     onChange={(event) =>
                       updateField("vendorName", event.target.value)
                     }
-                    placeholder="ABC Luggage Distributor"
+                    placeholder="Vendor or distributor name"
                     className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-800">
+                  <label className="mb-2 block text-sm font-bold text-zinc-800">
                     Vendor SKU
                   </label>
 
@@ -605,13 +787,13 @@ export default function AddProductPage() {
                     onChange={(event) =>
                       updateField("vendorSku", event.target.value)
                     }
-                    placeholder="ABC-CABIN-004"
+                    placeholder="VENDOR-SKU-001"
                     className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-800">
+                  <label className="mb-2 block text-sm font-bold text-zinc-800">
                     Vendor product ID
                   </label>
 
@@ -621,13 +803,13 @@ export default function AddProductPage() {
                     onChange={(event) =>
                       updateField("vendorProductId", event.target.value)
                     }
-                    placeholder="983"
+                    placeholder="Vendor product ID"
                     className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-800">
+                  <label className="mb-2 block text-sm font-bold text-zinc-800">
                     Vendor product URL
                   </label>
 
@@ -637,7 +819,7 @@ export default function AddProductPage() {
                     onChange={(event) =>
                       updateField("vendorUrl", event.target.value)
                     }
-                    placeholder="https://vendor.example/product/983"
+                    placeholder="https://vendor.example/product"
                     className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
@@ -646,20 +828,20 @@ export default function AddProductPage() {
           )}
 
           {!isAmazon && (
-            <section className="rounded-xl border border-gray-200 p-5">
-              <h2 className="text-lg font-semibold text-gray-950">
+            <section className="rounded-xl border border-zinc-200 p-5">
+              <h2 className="text-lg font-black text-zinc-950">
                 Purchase settings
               </h2>
 
               <div className="mt-4">
-                <label className="mb-2 block text-sm font-medium text-gray-800">
+                <label className="mb-2 block text-sm font-bold text-zinc-800">
                   Customer purchase method
                 </label>
 
                 <select
                   value={form.purchaseMode}
                   onChange={handlePurchaseModeChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                 >
                   <option value="CHECKOUT">Buy through Roto checkout</option>
                   <option value="EXTERNAL_LINK">
@@ -671,7 +853,7 @@ export default function AddProductPage() {
               {isExternal && (
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-800">
+                    <label className="mb-2 block text-sm font-bold text-zinc-800">
                       External product URL
                     </label>
 
@@ -682,12 +864,12 @@ export default function AddProductPage() {
                         updateField("externalUrl", event.target.value)
                       }
                       placeholder="https://partner.example/product"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-800">
+                    <label className="mb-2 block text-sm font-bold text-zinc-800">
                       Customer button text
                     </label>
 
@@ -698,7 +880,7 @@ export default function AddProductPage() {
                         updateField("externalButtonText", event.target.value)
                       }
                       placeholder="Explore Product"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                     />
                   </div>
                 </div>
@@ -707,7 +889,7 @@ export default function AddProductPage() {
               {!isExternal && (
                 <div className="mt-4 grid gap-4 sm:grid-cols-3">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-800">
+                    <label className="mb-2 block text-sm font-bold text-zinc-800">
                       Selling price (₹)
                     </label>
 
@@ -719,13 +901,13 @@ export default function AddProductPage() {
                       onChange={(event) =>
                         updateField("price", event.target.value)
                       }
-                      placeholder="2499"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      placeholder="899"
+                      className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-800">
+                    <label className="mb-2 block text-sm font-bold text-zinc-800">
                       Compare-at price (₹)
                     </label>
 
@@ -737,13 +919,13 @@ export default function AddProductPage() {
                       onChange={(event) =>
                         updateField("compareAtPrice", event.target.value)
                       }
-                      placeholder="2999"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      placeholder="1299"
+                      className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-800">
+                    <label className="mb-2 block text-sm font-bold text-zinc-800">
                       Available stock
                     </label>
 
@@ -756,7 +938,7 @@ export default function AddProductPage() {
                         updateField("stock", event.target.value)
                       }
                       placeholder="10"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                      className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                     />
                   </div>
                 </div>
@@ -764,24 +946,57 @@ export default function AddProductPage() {
             </section>
           )}
 
-          <section className="rounded-xl border border-gray-200 p-5">
-            <label className="flex cursor-pointer items-center gap-3 text-sm font-medium text-gray-800">
+          <section className="space-y-4 rounded-xl border border-zinc-200 p-5">
+            <label className="flex cursor-pointer items-start gap-3 text-sm font-bold text-zinc-800">
               <input
                 type="checkbox"
                 checked={form.isFeatured}
                 onChange={(event) =>
                   updateField("isFeatured", event.target.checked)
                 }
-                className="h-4 w-4 accent-orange-500"
+                className="mt-0.5 size-4 accent-zinc-950"
               />
-              Mark as featured product
+
+              <span>
+                <span className="block">Mark as featured product</span>
+
+                <span className="mt-1 block text-xs font-medium leading-5 text-zinc-500">
+                  Featured products can be prioritized in important store
+                  sections.
+                </span>
+              </span>
             </label>
+
+            <div className="border-t border-zinc-200 pt-4">
+              <label className="flex cursor-pointer items-start gap-3 text-sm font-bold text-zinc-800">
+                <input
+                  type="checkbox"
+                  checked={form.isNewDrop}
+                  onChange={(event) =>
+                    updateField("isNewDrop", event.target.checked)
+                  }
+                  className="mt-0.5 size-4 accent-amber-600"
+                />
+
+                <span>
+                  <span className="block text-amber-800">
+                    Mark as New Drop
+                  </span>
+
+                  <span className="mt-1 block text-xs font-medium leading-5 text-zinc-500">
+                    Show this product in the homepage New Drops section.
+                    Customers still open the product through its normal
+                    department and subcategory.
+                  </span>
+                </span>
+              </label>
+            </div>
           </section>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-xl bg-black px-5 py-3.5 font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
+            className="w-full rounded-xl bg-zinc-950 px-5 py-3.5 font-extrabold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
           >
             {isSubmitting ? "Saving product..." : "Save Product"}
           </button>
