@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "../../../../../../lib/auth";
-import razorpayInstance from "../../../../../../lib/razorpay";
+import { requireUser } from "../../../../../lib/auth";
+import razorpayInstance from "../../../../../lib/razorpay";
 
 export const runtime = "nodejs";
 
