@@ -8,8 +8,7 @@ const promotions = [
   {
     eyebrow: "Limited time",
     title: "Weekend Sale",
-    description:
-      "Fresh deals across fashion, accessories, home, and more.",
+    description: "Fresh deals across fashion, accessories, home, and more.",
     href: "/category/all",
     imageKey: "promos/home/weekend-sale",
     gradient: "from-rose-700 via-red-600 to-orange-500",
@@ -17,8 +16,7 @@ const promotions = [
   {
     eyebrow: "Fresh picks",
     title: "New Season",
-    description:
-      "Discover recently added styles and everyday essentials.",
+    description: "Discover recently added styles and everyday essentials.",
     href: "/category/new",
     imageKey: "promos/home/new-season",
     gradient: "from-emerald-700 via-teal-600 to-cyan-600",
@@ -26,8 +24,7 @@ const promotions = [
   {
     eyebrow: "Elevated essentials",
     title: "Premium Picks",
-    description:
-      "Explore quality products selected for every lifestyle.",
+    description: "Explore quality products selected for every lifestyle.",
     href: "/category/all?price=above-10000",
     imageKey: "promos/home/premium-picks",
     gradient: "from-violet-800 via-purple-700 to-fuchsia-700",
@@ -97,15 +94,22 @@ export default function HomePromoBanners() {
           {promotions.map((promotion) => {
             const imageUrl = media[promotion.imageKey];
 
+            const imageSrc = imageUrl
+              ? `${imageUrl}${imageUrl.includes("?") ? "&" : "?"}v=${encodeURIComponent(
+                  imageUrl,
+                )}`
+              : "";
+
             return (
               <Link
                 key={promotion.imageKey}
                 href={promotion.href}
                 className={`group relative min-h-[440px] overflow-hidden bg-gradient-to-br ${promotion.gradient} p-7 text-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl`}
               >
-                {imageUrl && (
+                {imageSrc && (
                   <img
-                    src={imageUrl}
+                    key={imageSrc}
+                    src={imageSrc}
                     alt={promotion.title}
                     className="absolute inset-0 size-full object-cover transition duration-700 group-hover:scale-105"
                   />
@@ -113,7 +117,7 @@ export default function HomePromoBanners() {
 
                 <div
                   className={`absolute inset-0 ${
-                    imageUrl
+                    imageSrc
                       ? "bg-gradient-to-t from-black/90 via-black/40 to-black/10"
                       : "bg-black/10"
                   }`}

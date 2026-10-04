@@ -6,11 +6,7 @@ import Media from "../../../../models/Media";
 
 export const runtime = "nodejs";
 
-const ALLOWED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-];
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
@@ -20,6 +16,7 @@ const allowedFolders = [
   "banners/",
   "logos/",
   "promos/",
+  "home/categories/",
 ];
 
 function getClientPayload(clientPayload) {
@@ -41,9 +38,7 @@ function getClientPayload(clientPayload) {
 }
 
 function isAllowedDestination(destination) {
-  return allowedFolders.some((folder) =>
-    destination.startsWith(folder),
-  );
+  return allowedFolders.some((folder) => destination.startsWith(folder));
 }
 
 function getMediaType(destination) {
@@ -53,6 +48,10 @@ function getMediaType(destination) {
 
   if (destination.startsWith("categories/")) {
     return "subcategory";
+  }
+
+  if (destination.startsWith("home/categories/")) {
+    return "category-showcase";
   }
 
   if (destination.startsWith("products/")) {
@@ -78,25 +77,18 @@ export async function POST(request) {
       body,
       request,
 
-      onBeforeGenerateToken: async (
-        pathname,
-        clientPayload,
-      ) => {
+      onBeforeGenerateToken: async (pathname, clientPayload) => {
         const payload = getClientPayload(clientPayload);
 
         const token = payload.token;
 
-        const destination = String(
-          payload.destination || "",
-        )
+        const destination = String(payload.destination || "")
           .trim()
           .replace(/^\/+/, "")
           .replace(/\s+/g, "-")
           .toLowerCase();
 
-        const mediaType = String(
-          payload.mediaType || "",
-        )
+        const mediaType = String(payload.mediaType || "")
           .trim()
           .toLowerCase();
 
@@ -104,10 +96,9 @@ export async function POST(request) {
           throw new Error("Missing media destination.");
         }
 
-        if (!isAllowedDestination(destination)) {
-          throw new Error("Invalid upload destination.");
-        }
-
+        throw new Error(
+          "Invalid upload destination. Choose a supported media location.",
+        );
         /*
           Security check:
           The Blob pathname must match the destination generated
@@ -149,37 +140,25 @@ export async function POST(request) {
             userId: admin._id.toString(),
             role: admin.role,
             destination,
-            mediaType:
-              mediaType || getMediaType(destination),
+            mediaType: mediaType || getMediaType(destination),
           }),
         };
       },
 
-      onUploadCompleted: async ({
-        blob,
-        tokenPayload,
-      }) => {
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
         try {
-          const uploadInfo = JSON.parse(
-            tokenPayload || "{}",
-          );
+          const uploadInfo = JSON.parse(tokenPayload || "{}");
 
-          const destination = String(
-            uploadInfo.destination || "",
-          )
+          const destination = String(uploadInfo.destination || "")
             .trim()
             .toLowerCase();
 
-          const mediaType = String(
-            uploadInfo.mediaType || "other",
-          )
+          const mediaType = String(uploadInfo.mediaType || "other")
             .trim()
             .toLowerCase();
 
           if (!destination) {
-            throw new Error(
-              "Upload completed without a media destination.",
-            );
+            throw new Error("Upload completed without a media destination.");
           }
 
           if (!isAllowedDestination(destination)) {
@@ -218,10 +197,7 @@ export async function POST(request) {
             uploadedBy: uploadInfo.userId,
           });
         } catch (error) {
-          console.error(
-            "DEVICE MEDIA MONGODB SAVE ERROR:",
-            error,
-          );
+          console.error("DEVICE MEDIA MONGODB SAVE ERROR:", error);
 
           throw error;
         }
@@ -230,15 +206,11 @@ export async function POST(request) {
 
     return NextResponse.json(jsonResponse);
   } catch (error) {
-    console.error(
-      "Vercel Blob upload authorization error:",
-      error,
-    );
+    console.error("Vercel Blob upload authorization error:", error);
 
     return NextResponse.json(
       {
-        message:
-          error.message || "Unable to authorize image upload.",
+        message: error.message || "Unable to authorize image upload.",
       },
       {
         status: error.status || 400,

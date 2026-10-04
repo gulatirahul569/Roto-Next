@@ -214,7 +214,7 @@ export default function LifestyleVideo() {
         >
           <div
             ref={frameRef}
-            className="relative h-80 w-full overflow-hidden rounded-2xl bg-zinc-200 sm:h-96 md:h-[440px] lg:h-[580px]"
+            className="relative h-80 w-full overflow-hidden rounded-xl bg-zinc-200 sm:h-96 md:h-[440px] lg:h-[580px]"
           >
             <motion.video
               ref={videoRef}

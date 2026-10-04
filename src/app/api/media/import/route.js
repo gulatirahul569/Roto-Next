@@ -10,6 +10,7 @@ const allowedFolders = [
   "banners/",
   "logos/",
   "promos/",
+  "home/categories/",
 ];
 
 const allowedHosts = ["images.pexels.com"];
@@ -46,6 +47,10 @@ function getMediaType(destination) {
   if (destination.startsWith("logos/")) {
     return "logo";
   }
+  
+  if (destination.startsWith("home/categories/")) {
+  return "category-showcase";
+}
 
   if (destination.startsWith("promos/")) {
     return "promo";

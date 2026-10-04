@@ -72,7 +72,7 @@ export default function CategoryShowcase({ media = {} }) {
               <Link
                 key={category.title}
                 href={category.route}
-                className="group relative min-h-[420px] overflow-hidden rounded-2xl bg-zinc-900 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                className="group relative min-h-[420px] overflow-hidden bg-zinc-900 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
               >
                 <img
                   src={imageUrl}

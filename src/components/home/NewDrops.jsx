@@ -59,7 +59,7 @@ function DropCard({ product }) {
   return (
     <Link
       href={`/product/${product._id}`}
-      className="group/card relative block  h-[340px] overflow-hidden rounded-3xl border border-black/5  shadow-xl transition-transform duration-300 hover:-translate-y-2 sm:h-96"
+      className="group/card relative block  h-[340px] overflow-hidden  border border-black/5  transition-transform duration-300 hover:-translate-y-2 sm:h-96"
     >
       {image && (
         <img
@@ -218,7 +218,7 @@ export default function NewDrops() {
 
       {!error && !isLoading && products.length === 0 && (
         <div className="mx-auto mt-10 max-w-full px-6 lg:px-8">
-          <div className="flex min-h-52 w-full items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-center">
+          <div className="flex min-h-52 w-full items-center justify-center rounded-2x border border-dashed border-zinc-300 bg-white p-8 text-center">
             <div>
               <p className="font-bold text-zinc-950">
                 No new drops are available yet.
