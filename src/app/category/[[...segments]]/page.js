@@ -32,10 +32,11 @@ const sortOptions = [
 
 const priceOptions = [
   "All",
-  "Under ₹3000",
-  "₹3000 - ₹6000",
-  "₹6000 - ₹9000",
-  "Above ₹9000",
+  "Under ₹1000",
+  "₹1000 - ₹3000",
+  "₹3000 - ₹5000",
+  "₹5000 - ₹10000",
+  "Above ₹10000",
 ];
 
 function ProductGridSkeleton({ count = 8 }) {
@@ -198,12 +199,13 @@ function FilterContent({
   setSelectedFilter,
   selectedPrice,
   setSelectedPrice,
+  filterTitle = "Subcategory",
 }) {
   return (
     <div className="space-y-7">
       <div>
         <h3 className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-zinc-500">
-          Product type
+          {filterTitle}
         </h3>
 
         <div className="flex flex-wrap gap-2 lg:flex-col">
@@ -250,6 +252,37 @@ function FilterContent({
   );
 }
 
+function CategoryMediaSkeleton() {
+  return (
+    <main className="min-h-screen bg-zinc-50">
+      <section className="relative min-h-[590px] animate-pulse overflow-hidden bg-zinc-900 sm:min-h-[450px] lg:min-h-[560px]">
+        <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-800 to-zinc-700" />
+
+        <div className="relative mx-auto flex min-h-[590px] max-w-7xl items-end px-6 py-14 sm:min-h-[450px] lg:min-h-[560px] lg:px-8">
+          <div className="w-full max-w-2xl">
+            <div className="h-3 w-28 rounded bg-white/20" />
+            <div className="mt-6 h-16 max-w-md rounded bg-white/20 sm:h-20" />
+            <div className="mt-5 h-5 max-w-xl rounded bg-white/15" />
+            <div className="mt-3 h-5 max-w-lg rounded bg-white/15" />
+            <div className="mt-8 h-12 w-44 rounded-full bg-white/20" />
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div
+              key={index}
+              className="h-72 animate-pulse rounded-2xl bg-zinc-200"
+            />
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default function CategoryPage() {
   const params = useParams();
 
@@ -264,6 +297,7 @@ export default function CategoryPage() {
   const subcategorySlug = segments[1] ? String(segments[1]).toLowerCase() : "";
 
   const [mediaOverrides, setMediaOverrides] = useState({});
+  const [isMediaLoading, setIsMediaLoading] = useState(true);
 
   const baseDepartment = getDepartmentBySlug(departmentSlug);
 
@@ -304,81 +338,85 @@ export default function CategoryPage() {
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
 
-useEffect(() => {
-  let isActive = true;
+  useEffect(() => {
+    let isActive = true;
 
-  async function loadMediaOverrides() {
-    try {
-      const response = await fetch("/api/media", {
-        cache: "no-store",
-      });
+    async function loadMediaOverrides() {
+      try {
+        const response = await fetch("/api/media", {
+          cache: "no-store",
+        });
 
-      if (!response.ok) {
-        throw new Error("Unable to load media overrides.");
-      }
+        if (!response.ok) {
+          throw new Error("Unable to load media overrides.");
+        }
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (isActive) {
-        setMediaOverrides(data.media || {});
-      }
-    } catch (mediaError) {
-      console.error("Category media loading error:", mediaError);
+        if (isActive) {
+          setMediaOverrides(data.media || {});
+        }
+      } catch (mediaError) {
+        console.error("Category media loading error:", mediaError);
 
-      if (isActive) {
-        setMediaOverrides({});
+        if (isActive) {
+          setMediaOverrides({});
+        }
+      } finally {
+        if (isActive) {
+          setIsMediaLoading(false);
+        }
       }
     }
-  }
 
-  loadMediaOverrides();
+    loadMediaOverrides();
 
-  return () => {
-    isActive = false;
-  };
-}, []);
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
-useEffect(() => {
-  if (!isValidRoute || !department) {
-    setIsLoading(false);
-    return;
-  }
-
-  async function loadProducts() {
-    try {
-      setIsLoading(true);
-      setError("");
-
-      const filters = {};
-
-      if (department.key !== "ALL") {
-        filters.department = department.key;
-      }
-
-      if (subcategory) {
-        filters.subcategory = subcategory.slug;
-      }
-
-      if (department.slug === "new") {
-        filters.category = "new";
-      }
-
-      const response = await fetchProducts(undefined, filters);
-
-      const productList = response?.products || response || [];
-
-      setProducts(Array.isArray(productList) ? productList : []);
-    } catch (requestError) {
-      console.error("Category product loading error:", requestError);
-
-      setError("Unable to load products right now. Please try again.");
-    } finally {
+  useEffect(() => {
+    if (!isValidRoute || !department) {
       setIsLoading(false);
+      return;
     }
-  }
 
-  loadProducts();
-}, [department?.key, department?.slug, isValidRoute, subcategory?.slug]);
+    async function loadProducts() {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const filters = {};
+
+        if (department.key !== "ALL") {
+          filters.department = department.key;
+        }
+
+        if (subcategory) {
+          filters.subcategory = subcategory.slug;
+        }
+
+        if (department.slug === "new") {
+          filters.category = "new";
+        }
+
+        const response = await fetchProducts(undefined, filters);
+
+        const productList = response?.products || response || [];
+
+        setProducts(Array.isArray(productList) ? productList : []);
+      } catch (requestError) {
+        console.error("Category product loading error:", requestError);
+
+        setError("Unable to load products right now. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadProducts();
+  }, [department?.key, department?.slug, isValidRoute, subcategory?.slug]);
 
   useEffect(() => {
     setSelectedFilter("All");
@@ -402,18 +440,49 @@ useEffect(() => {
       document.body.style.overflow = previousOverflow;
     };
   }, [isMobileFiltersOpen]);
-
   const productTypeFilters = useMemo(() => {
-    const categories = Array.from(
-      new Set(
-        products
-          .map((product) => String(product.category || "").trim())
-          .filter(Boolean),
-      ),
-    ).sort((first, second) => first.localeCompare(second));
+    /*
+    /category/all
 
-    return ["All", ...categories];
-  }, [products]);
+    Show main store departments instead of subcategories.
+  */
+    if (department?.slug === "all") {
+      return ["All", "Men", "Women", "Kids", "Home", "Accessories"];
+    }
+
+    /*
+    /category/new
+
+    New Drops already loads products using category=new.
+    No department/subcategory filter is needed here.
+  */
+    if (department?.slug === "new") {
+      return ["All"];
+    }
+
+    /*
+    /category/men/t-shirts
+
+    The URL already loads only T-Shirts products.
+  */
+    if (subcategory) {
+      return ["All", subcategory.title];
+    }
+
+    /*
+    /category/men
+    /category/women
+    /category/kids
+    /category/home
+    /category/accessories
+  */
+    return [
+      "All",
+      ...(department?.subcategories || []).map((item) => item.title),
+    ];
+  }, [department, subcategory]);
+
+  const filterTitle = department?.slug === "all" ? "Department" : "Subcategory";
 
   const brands = useMemo(() => {
     return Array.from(
@@ -442,14 +511,39 @@ useEffect(() => {
   const finalProducts = useMemo(() => {
     let result = [...products];
 
-    if (selectedFilter !== "All") {
+if (selectedFilter !== "All") {
+  /*
+    On /category/all:
+    "Men" becomes department: "MEN"
+    "Women" becomes department: "WOMEN"
+    etc.
+  */
+  if (department?.slug === "all") {
+    result = result.filter(
+      (product) =>
+        String(product.department || "").toUpperCase() ===
+        selectedFilter.toUpperCase(),
+    );
+  } else {
+    /*
+      On department landing pages:
+      "T-Shirts" becomes subcategory: "t-shirts"
+      "Dresses" becomes subcategory: "dresses"
+      etc.
+    */
+    const selectedSubcategory = department?.subcategories?.find(
+      (item) => item.title === selectedFilter,
+    );
+
+    if (selectedSubcategory) {
       result = result.filter(
         (product) =>
-          String(product.category || "").toLowerCase() ===
-          selectedFilter.toLowerCase(),
+          String(product.subcategory || "").toLowerCase() ===
+          selectedSubcategory.slug,
       );
     }
-
+  }
+}
     if (selectedBrand !== "All") {
       result = result.filter(
         (product) =>
@@ -458,30 +552,37 @@ useEffect(() => {
       );
     }
 
-    if (selectedPrice === "Under ₹3000") {
-      result = result.filter((product) => Number(product.price || 0) < 3000);
+    if (selectedPrice === "Under ₹1000") {
+      result = result.filter((product) => Number(product.price || 0) < 1000);
     }
 
-    if (selectedPrice === "₹3000 - ₹6000") {
+    if (selectedPrice === "₹1000 - ₹3000") {
       result = result.filter((product) => {
         const price = Number(product.price || 0);
 
-        return price >= 3000 && price <= 6000;
+        return price >= 1000 && price <= 3000;
       });
     }
 
-    if (selectedPrice === "₹6000 - ₹9000") {
+    if (selectedPrice === "₹3000 - ₹5000") {
       result = result.filter((product) => {
         const price = Number(product.price || 0);
 
-        return price >= 6000 && price <= 9000;
+        return price > 3000 && price <= 5000;
       });
     }
 
-    if (selectedPrice === "Above ₹9000") {
-      result = result.filter((product) => Number(product.price || 0) > 9000);
+    if (selectedPrice === "₹5000 - ₹10000") {
+      result = result.filter((product) => {
+        const price = Number(product.price || 0);
+
+        return price > 5000 && price <= 10000;
+      });
     }
 
+    if (selectedPrice === "Above ₹10000") {
+      result = result.filter((product) => Number(product.price || 0) > 10000);
+    }
     if (sortOption === "Price: Low to High") {
       return result.sort(
         (firstProduct, secondProduct) =>
@@ -504,7 +605,18 @@ useEffect(() => {
     }
 
     return result;
-  }, [products, selectedBrand, selectedFilter, selectedPrice, sortOption]);
+  }, [
+    products,
+    department,
+    selectedBrand,
+    selectedFilter,
+    selectedPrice,
+    sortOption,
+  ]);
+
+  if (isMediaLoading) {
+    return <CategoryMediaSkeleton />;
+  }
 
   if (!isValidRoute) {
     return (
@@ -532,10 +644,6 @@ useEffect(() => {
       </main>
     );
   }
-
-  const heroPrimaryHref = subcategory
-    ? "#products"
-    : `/category/${department.slug}`;
 
   const heroPrimaryLabel = subcategory
     ? `Shop ${subcategory.title}`
@@ -573,7 +681,7 @@ useEffect(() => {
         <img
           src={department.banner}
           alt={pageTitle}
-          className="absolute inset-0 size-full object-cover "
+          className="absolute inset-0 size-full object-cover"
         />
 
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/20" />
@@ -679,6 +787,7 @@ useEffect(() => {
           </div>
         </section>
       )}
+
       {shouldShowFeaturedProducts && (
         <section className="bg-zinc-50 py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -711,6 +820,7 @@ useEffect(() => {
                 type="button"
                 onClick={() => {
                   setSelectedBrand("All");
+
                   document.getElementById("products")?.scrollIntoView({
                     behavior: "smooth",
                     block: "start",
@@ -731,6 +841,7 @@ useEffect(() => {
                   type="button"
                   onClick={() => {
                     setSelectedBrand(brand);
+
                     document.getElementById("products")?.scrollIntoView({
                       behavior: "smooth",
                       block: "start",
@@ -804,6 +915,7 @@ useEffect(() => {
                 setSelectedFilter={setSelectedFilter}
                 selectedPrice={selectedPrice}
                 setSelectedPrice={setSelectedPrice}
+                filterTitle={filterTitle}
               />
 
               <button
@@ -842,6 +954,7 @@ useEffect(() => {
                 setSelectedFilter={setSelectedFilter}
                 selectedPrice={selectedPrice}
                 setSelectedPrice={setSelectedPrice}
+                filterTitle={filterTitle}
               />
             </div>
           </aside>
