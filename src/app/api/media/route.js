@@ -3,6 +3,22 @@ import { connectDatabase } from "../../../lib/db";
 import Media from "../../../models/Media";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const noStoreHeaders = {
+  "Cache-Control": "no-store, max-age=0, must-revalidate",
+};
+
+function createMediaMap(mediaItems) {
+  return mediaItems.reduce((result, item) => {
+    if (!result[item.key]) {
+      result[item.key] = item.imageUrl;
+    }
+
+    return result;
+  }, {});
+}
 
 export async function GET(request) {
   try {
@@ -19,7 +35,9 @@ export async function GET(request) {
       .toLowerCase();
 
     if (key) {
-      const media = await Media.findOne({ key }).lean();
+      const media = await Media.findOne({ key })
+        .sort({ updatedAt: -1 })
+        .lean();
 
       return NextResponse.json(
         {
@@ -32,7 +50,10 @@ export async function GET(request) {
               }
             : null,
         },
-        { status: 200 },
+        {
+          status: 200,
+          headers: noStoreHeaders,
+        },
       );
     }
 
@@ -51,16 +72,16 @@ export async function GET(request) {
         .sort({ updatedAt: -1 })
         .lean();
 
-      const mediaMap = mediaItems.reduce((result, item) => {
-        result[item.key] = item.imageUrl;
-        return result;
-      }, {});
+      const mediaMap = createMediaMap(mediaItems);
 
       return NextResponse.json(
         {
           media: mediaMap,
         },
-        { status: 200 },
+        {
+          status: 200,
+          headers: noStoreHeaders,
+        },
       );
     }
 
@@ -68,16 +89,16 @@ export async function GET(request) {
       .sort({ updatedAt: -1 })
       .lean();
 
-    const mediaMap = mediaItems.reduce((result, item) => {
-      result[item.key] = item.imageUrl;
-      return result;
-    }, {});
+    const mediaMap = createMediaMap(mediaItems);
 
     return NextResponse.json(
       {
         media: mediaMap,
       },
-      { status: 200 },
+      {
+        status: 200,
+        headers: noStoreHeaders,
+      },
     );
   } catch (error) {
     console.error("GET MEDIA ERROR:", error);
@@ -86,7 +107,10 @@ export async function GET(request) {
       {
         message: error.message || "Unable to load media.",
       },
-      { status: 500 },
+      {
+        status: 500,
+        headers: noStoreHeaders,
+      },
     );
   }
 }

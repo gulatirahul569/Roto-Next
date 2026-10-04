@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FiArrowRight } from "react-icons/fi";
 
@@ -9,8 +12,7 @@ const promotions = [
       "Fresh deals across fashion, accessories, home, and more.",
     href: "/category/all",
     imageKey: "promos/home/weekend-sale",
-    gradient:
-      "from-rose-700 via-red-600 to-orange-500",
+    gradient: "from-rose-700 via-red-600 to-orange-500",
   },
   {
     eyebrow: "Fresh picks",
@@ -19,8 +21,7 @@ const promotions = [
       "Discover recently added styles and everyday essentials.",
     href: "/category/new",
     imageKey: "promos/home/new-season",
-    gradient:
-      "from-emerald-700 via-teal-600 to-cyan-600",
+    gradient: "from-emerald-700 via-teal-600 to-cyan-600",
   },
   {
     eyebrow: "Elevated essentials",
@@ -29,12 +30,52 @@ const promotions = [
       "Explore quality products selected for every lifestyle.",
     href: "/category/all?price=above-10000",
     imageKey: "promos/home/premium-picks",
-    gradient:
-      "from-violet-800 via-purple-700 to-fuchsia-700",
+    gradient: "from-violet-800 via-purple-700 to-fuchsia-700",
   },
 ];
 
-export default function HomePromoBanners({ media = {} }) {
+export default function HomePromoBanners() {
+  const [media, setMedia] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadHomePromoMedia() {
+      try {
+        const response = await fetch("/api/media", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Unable to load homepage promotion media.");
+        }
+
+        const data = await response.json();
+
+        if (isActive) {
+          setMedia(data.media || {});
+        }
+      } catch (error) {
+        console.error("Home promotion media error:", error);
+
+        if (isActive) {
+          setMedia({});
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadHomePromoMedia();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   return (
     <section className="bg-gray-50 py-8">
       <div className="mx-auto max-w-full px-6 lg:px-8">
@@ -60,12 +101,12 @@ export default function HomePromoBanners({ media = {} }) {
               <Link
                 key={promotion.imageKey}
                 href={promotion.href}
-                className={`group relative min-h-[440px] overflow-hidden  bg-gradient-to-br ${promotion.gradient} p-7 text-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl`}
+                className={`group relative min-h-[440px] overflow-hidden bg-gradient-to-br ${promotion.gradient} p-7 text-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl`}
               >
                 {imageUrl && (
                   <img
                     src={imageUrl}
-                    alt=""
+                    alt={promotion.title}
                     className="absolute inset-0 size-full object-cover transition duration-700 group-hover:scale-105"
                   />
                 )}
@@ -92,7 +133,8 @@ export default function HomePromoBanners({ media = {} }) {
                   </p>
 
                   <span className="mt-6 inline-flex items-center gap-2 text-sm font-extrabold">
-                    Explore now
+                    {isLoading ? "Loading offer..." : "Explore now"}
+
                     <FiArrowRight
                       size={17}
                       className="transition group-hover:translate-x-1"
