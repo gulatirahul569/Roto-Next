@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FiCheckCircle,
-  FiCopy,
   FiImage,
   FiLink,
   FiLoader,
@@ -11,6 +10,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { useAuth } from "../../../context/AuthContext";
+import { departmentData } from "../../../data/departmentData";
 import {
   importStoreMediaFromUrl,
   uploadStoreMedia,
@@ -28,40 +28,206 @@ function formatFileSize(bytes = 0) {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-const mediaPresets = [
+const imageTypes = [
   {
+    value: "banner",
     label: "Department banner",
-    destination: "banners/men",
-    hint: "Examples: banners/men, banners/women, banners/kids",
+    description: "Large hero image used at the top of a department page.",
   },
   {
+    value: "subcategory",
     label: "Subcategory image",
-    destination: "categories/men/t-shirts",
-    hint: "Examples: categories/men/t-shirts, categories/women/dresses",
+    description: "Collection-card image such as Men → T-Shirts.",
   },
   {
-    label: "Product image",
-    destination: "products/manual/product-image",
-    hint: "For manual product uploads. Usually use Admin → Products instead.",
+    value: "category-showcase",
+    label: "Homepage category showcase",
+    description:
+      "Large image card for Men, Women, Kids, Home, or Accessories on the homepage.",
   },
   {
+    value: "promo",
+    label: "Home promotion",
+    description: "Budget card, offer banner, or animated homepage promotion.",
+  },
+  {
+    value: "logo",
     label: "Logo",
-    destination: "logos/roto-logo",
-    hint: "Examples: logos/roto-logo or logos/footer-logo",
+    description: "Roto logo or footer/logo branding image.",
   },
 ];
+
+const departments = [
+  {
+    value: "all",
+    label: "All Products",
+  },
+  {
+    value: "new",
+    label: "New Drops",
+  },
+  {
+    value: "men",
+    label: "Men",
+  },
+  {
+    value: "women",
+    label: "Women",
+  },
+  {
+    value: "kids",
+    label: "Kids",
+  },
+  {
+    value: "home",
+    label: "Home",
+  },
+  {
+    value: "accessories",
+    label: "Accessories",
+  },
+];
+
+const logoOptions = [
+  {
+    value: "roto-logo",
+    label: "Main Header Logo",
+  },
+  {
+    value: "roto-logo-white",
+    label: "White Header Logo",
+  },
+  {
+    value: "footer-logo",
+    label: "Footer Logo",
+  },
+];
+
+const promotionOptions = [
+  {
+    value: "under-1000",
+    label: "Budget Card: Under ₹1,000",
+  },
+  {
+    value: "1000-3000",
+    label: "Budget Card: ₹1,000 – ₹3,000",
+  },
+  {
+    value: "3000-5000",
+    label: "Budget Card: ₹3,000 – ₹5,000",
+  },
+  {
+    value: "5000-10000",
+    label: "Budget Card: ₹5,000 – ₹10,000",
+  },
+  {
+    value: "above-10000",
+    label: "Budget Card: Above ₹10,000",
+  },
+  {
+    value: "weekend-sale",
+    label: "Featured Offer: Weekend Sale",
+  },
+  {
+    value: "new-season",
+    label: "Featured Offer: New Season",
+  },
+  {
+    value: "premium-picks",
+    label: "Featured Offer: Premium Picks",
+  },
+  {
+    value: "category-showcase-mini-offer",
+    label: "Animated Promo: After Category Showcase",
+  },
+];
+
+function getDepartmentFallbackBanner(departmentSlug) {
+  return departmentData[departmentSlug]?.banner || "";
+}
+
+function getSubcategoryFallbackImage(departmentSlug, subcategorySlug) {
+  const department = departmentData[departmentSlug];
+
+  if (!department) {
+    return "";
+  }
+
+  const subcategory = department.subcategories?.find(
+    (item) => item.slug === subcategorySlug,
+  );
+
+  return subcategory?.image || "";
+}
 
 export default function AdminMediaPage() {
   const { token, user, isAuthLoaded } = useAuth();
 
+  const [mediaType, setMediaType] = useState("subcategory");
+  const [departmentSlug, setDepartmentSlug] = useState("men");
+  const [subcategorySlug, setSubcategorySlug] = useState("t-shirts");
+  const [logoSlug, setLogoSlug] = useState("roto-logo");
+  const [promotionSlug, setPromotionSlug] = useState("under-1000");
+
   const [selectedFile, setSelectedFile] = useState(null);
   const [externalImageUrl, setExternalImageUrl] = useState("");
   const [filePreviewUrl, setFilePreviewUrl] = useState("");
-  const [destination, setDestination] = useState("categories/men/t-shirts");
+
+  const [mediaMap, setMediaMap] = useState({});
+  const [isMediaLoading, setIsMediaLoading] = useState(true);
+
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedMedia, setUploadedMedia] = useState(null);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+
+  const availableSubcategories = useMemo(() => {
+    return departmentData[departmentSlug]?.subcategories || [];
+  }, [departmentSlug]);
+
+  const destination = useMemo(() => {
+    if (mediaType === "banner") {
+      return `banners/${departmentSlug}`;
+    }
+
+    if (mediaType === "subcategory") {
+      return `categories/${departmentSlug}/${subcategorySlug}`;
+    }
+
+    if (mediaType === "promo") {
+      return `promos/home/${promotionSlug}`;
+    }
+
+    if (mediaType === "logo") {
+      return `logos/${logoSlug}`;
+    }
+    if (mediaType === "category-showcase") {
+      return `home/categories/${departmentSlug}`;
+    }
+
+    return "";
+  }, [departmentSlug, logoSlug, mediaType, promotionSlug, subcategorySlug]);
+
+  const currentImageUrl = useMemo(() => {
+    if (mediaMap[destination]) {
+      return mediaMap[destination];
+    }
+
+    if (mediaType === "banner") {
+      return getDepartmentFallbackBanner(departmentSlug);
+    }
+
+    if (mediaType === "subcategory") {
+      return getSubcategoryFallbackImage(departmentSlug, subcategorySlug);
+    }
+
+    return "";
+  }, [departmentSlug, destination, mediaMap, mediaType, subcategorySlug]);
+
+  const isUrlMode = Boolean(externalImageUrl.trim());
+
+  const uploadPreviewUrl = selectedFile
+    ? filePreviewUrl
+    : externalImageUrl.trim();
 
   useEffect(() => {
     if (!selectedFile) {
@@ -70,6 +236,7 @@ export default function AdminMediaPage() {
     }
 
     const objectUrl = URL.createObjectURL(selectedFile);
+
     setFilePreviewUrl(objectUrl);
 
     return () => {
@@ -77,20 +244,127 @@ export default function AdminMediaPage() {
     };
   }, [selectedFile]);
 
-  const isUrlMode = Boolean(externalImageUrl.trim());
+  useEffect(() => {
+    let isActive = true;
 
-  const previewUrl = selectedFile ? filePreviewUrl : externalImageUrl.trim();
+    async function loadCurrentMedia() {
+      try {
+        setIsMediaLoading(true);
 
-  const selectedPreset = mediaPresets.find(
-    (preset) => preset.destination === destination,
-  );
+        const response = await fetch("/api/media", {
+          cache: "no-store",
+        });
 
+        if (!response.ok) {
+          throw new Error("Unable to load current media.");
+        }
+
+        const data = await response.json();
+
+        if (isActive) {
+          setMediaMap(data.media || {});
+        }
+      } catch (mediaError) {
+        console.error("Media Library loading error:", mediaError);
+
+        if (isActive) {
+          setMediaMap({});
+        }
+      } finally {
+        if (isActive) {
+          setIsMediaLoading(false);
+        }
+      }
+    }
+
+    loadCurrentMedia();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (mediaType !== "subcategory") {
+      return;
+    }
+
+    const firstSubcategory = departmentData[departmentSlug]?.subcategories?.[0];
+
+    if (!firstSubcategory) {
+      setDepartmentSlug("men");
+      setSubcategorySlug("t-shirts");
+      return;
+    }
+
+    const currentSubcategoryExists = departmentData[
+      departmentSlug
+    ]?.subcategories?.some((item) => item.slug === subcategorySlug);
+
+    if (!currentSubcategoryExists) {
+      setSubcategorySlug(firstSubcategory.slug);
+    }
+  }, [departmentSlug, mediaType, subcategorySlug]);
+
+  const handleMediaTypeChange = (event) => {
+    const nextMediaType = event.target.value;
+
+    setMediaType(nextMediaType);
+    setSelectedFile(null);
+    setExternalImageUrl("");
+    setUploadedMedia(null);
+    setError("");
+
+    if (nextMediaType === "subcategory") {
+      setDepartmentSlug("men");
+      setSubcategorySlug("t-shirts");
+    }
+    if (nextMediaType === "banner" || nextMediaType === "category-showcase") {
+      setDepartmentSlug("men");
+    }
+
+    if (nextMediaType === "promo") {
+      setPromotionSlug("under-1000");
+    }
+  };
+
+  const handleDepartmentChange = (event) => {
+    const nextDepartmentSlug = event.target.value;
+
+    setDepartmentSlug(nextDepartmentSlug);
+    setUploadedMedia(null);
+    setError("");
+
+    const firstSubcategory =
+      departmentData[nextDepartmentSlug]?.subcategories?.[0];
+
+    if (firstSubcategory) {
+      setSubcategorySlug(firstSubcategory.slug);
+    }
+  };
+
+  const handleSubcategoryChange = (event) => {
+    setSubcategorySlug(event.target.value);
+    setUploadedMedia(null);
+    setError("");
+  };
+
+  const handleLogoChange = (event) => {
+    setLogoSlug(event.target.value);
+    setUploadedMedia(null);
+    setError("");
+  };
+
+  const handlePromotionChange = (event) => {
+    setPromotionSlug(event.target.value);
+    setUploadedMedia(null);
+    setError("");
+  };
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
 
     setError("");
     setUploadedMedia(null);
-    setCopied(false);
     setExternalImageUrl("");
     setSelectedFile(file || null);
   };
@@ -100,19 +374,8 @@ export default function AdminMediaPage() {
 
     setError("");
     setUploadedMedia(null);
-    setCopied(false);
     setSelectedFile(null);
     setExternalImageUrl(url);
-  };
-
-  const handlePresetChange = (event) => {
-    const preset = mediaPresets[Number(event.target.value)];
-
-    if (!preset) {
-      return;
-    }
-
-    setDestination(preset.destination);
   };
 
   const handleUpload = async () => {
@@ -121,8 +384,8 @@ export default function AdminMediaPage() {
       return;
     }
 
-    if (!destination.trim()) {
-      setError("Please enter an image destination path.");
+    if (!destination) {
+      setError("Please select a valid media destination.");
       return;
     }
 
@@ -130,7 +393,6 @@ export default function AdminMediaPage() {
       setIsUploading(true);
       setError("");
       setUploadedMedia(null);
-      setCopied(false);
 
       const media = selectedFile
         ? await uploadStoreMedia(selectedFile, token, destination)
@@ -140,33 +402,27 @@ export default function AdminMediaPage() {
             destination,
           );
 
-      setUploadedMedia({
+      const savedMedia = {
         ...media,
         source: selectedFile ? "device" : "url",
-      });
+        destination,
+      };
+
+      setUploadedMedia(savedMedia);
+
+      setMediaMap((currentMedia) => ({
+        ...currentMedia,
+        [destination]: savedMedia.imageUrl,
+      }));
+
+      setSelectedFile(null);
+      setExternalImageUrl("");
     } catch (uploadError) {
       setError(
         uploadError.message || "Unable to optimize and upload the image.",
       );
     } finally {
       setIsUploading(false);
-    }
-  };
-
-  const copyUrl = async () => {
-    if (!uploadedMedia?.imageUrl) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(uploadedMedia.imageUrl);
-      setCopied(true);
-
-      window.setTimeout(() => {
-        setCopied(false);
-      }, 2000);
-    } catch {
-      setError("Unable to copy the URL. Please copy it manually.");
     }
   };
 
@@ -208,8 +464,8 @@ export default function AdminMediaPage() {
         </h1>
 
         <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
-          Upload and optimize department banners, category images, logos, and
-          other store media for Vercel Blob.
+          Select a department and subcategory. The Vercel Blob destination is
+          created automatically, so image paths stay correct.
         </p>
       </header>
 
@@ -231,12 +487,12 @@ export default function AdminMediaPage() {
       <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-8">
         <div>
           <h2 className="text-lg font-black text-zinc-950">
-            Upload store image
+            Replace store image
           </h2>
 
           <p className="mt-1 text-sm text-zinc-600">
-            Device uploads are converted to WebP and resized before they are
-            sent to storage.
+            Choose what the image is for, then choose its department or
+            subcategory.
           </p>
         </div>
 
@@ -247,37 +503,165 @@ export default function AdminMediaPage() {
             </span>
 
             <select
-              defaultValue="1"
-              onChange={handlePresetChange}
+              value={mediaType}
+              onChange={handleMediaTypeChange}
               className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-100"
             >
-              {mediaPresets.map((preset, index) => (
-                <option key={preset.label} value={index}>
-                  {preset.label}
+              {imageTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
                 </option>
               ))}
             </select>
           </label>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-bold text-zinc-800">
-              Blob destination path
-            </span>
+          {mediaType !== "logo" && mediaType !== "promo" && (
+            <label className="block">
+              <span className="mb-2 block text-sm font-bold text-zinc-800">
+                Department
+              </span>
 
-            <input
-              value={destination}
-              onChange={(event) => setDestination(event.target.value)}
-              placeholder="categories/men/t-shirts"
-              className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-100"
-            />
-          </label>
+              <select
+                value={departmentSlug}
+                onChange={handleDepartmentChange}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-100"
+              >
+                {departments.map((department) => (
+                  <option
+                    key={department.value}
+                    value={department.value}
+                    disabled={
+                      mediaType === "subcategory" &&
+                      !departmentData[department.value]?.subcategories?.length
+                    }
+                  >
+                    {department.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {mediaType === "subcategory" && (
+            <label className="block">
+              <span className="mb-2 block text-sm font-bold text-zinc-800">
+                Subcategory
+              </span>
+
+              <select
+                value={subcategorySlug}
+                onChange={handleSubcategoryChange}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-100"
+              >
+                {availableSubcategories.map((subcategory) => (
+                  <option key={subcategory.slug} value={subcategory.slug}>
+                    {subcategory.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {mediaType === "promo" && (
+            <label className="block">
+              <span className="mb-2 block text-sm font-bold text-zinc-800">
+                Homepage promotion
+              </span>
+
+              <select
+                value={promotionSlug}
+                onChange={handlePromotionChange}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-100"
+              >
+                {promotionOptions.map((promotion) => (
+                  <option key={promotion.value} value={promotion.value}>
+                    {promotion.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {mediaType === "logo" && (
+            <label className="block">
+              <span className="mb-2 block text-sm font-bold text-zinc-800">
+                Logo location
+              </span>
+
+              <select
+                value={logoSlug}
+                onChange={handleLogoChange}
+                className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-100"
+              >
+                {logoOptions.map((logo) => (
+                  <option key={logo.value} value={logo.value}>
+                    {logo.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
 
-        {selectedPreset?.hint && (
-          <p className="mt-2 text-xs font-semibold text-zinc-500">
-            {selectedPreset.hint}
+        <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-amber-700">
+            Automatic Vercel Blob destination
           </p>
-        )}
+
+          <code className="mt-2 block break-all rounded-xl bg-white px-4 py-3 text-sm font-black text-zinc-950">
+            {destination || "Select a media type"}
+          </code>
+
+          <p className="mt-2 text-xs leading-5 text-amber-800">
+            This path is generated by the selected options and cannot be typed
+            manually.
+          </p>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-black text-zinc-950">
+                Current published image
+              </p>
+
+              <p className="mt-1 text-xs text-zinc-500">
+                This is the current image used by your website for the selected
+                destination.
+              </p>
+            </div>
+
+            {isMediaLoading && (
+              <FiLoader
+                size={18}
+                className="shrink-0 animate-spin text-zinc-400"
+              />
+            )}
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-xl bg-zinc-200">
+            {currentImageUrl ? (
+              <img
+                src={currentImageUrl}
+                alt="Current published store media"
+                className="h-60 w-full object-cover"
+              />
+            ) : (
+              <div className="grid h-60 place-items-center bg-zinc-100 text-center">
+                <div>
+                  <FiImage size={30} className="mx-auto text-zinc-400" />
+
+                  <p className="mt-3 text-sm font-bold text-zinc-500">
+                    No image has been published yet.
+                  </p>
+
+                  <p className="mt-1 text-xs text-zinc-400">
+                    Upload the first image for this destination.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="mt-6">
           <label className="block">
@@ -296,11 +680,12 @@ export default function AdminMediaPage() {
           </label>
 
           <p className="mt-2 text-xs leading-5 text-zinc-500">
-            Paste a direct public image file URL, for example an
+            Paste a direct image URL, such as an
             <code className="mx-1 rounded bg-zinc-100 px-1.5 py-0.5 font-bold">
               images.pexels.com
             </code>
-            image URL. Do not paste a normal Pexels photo-page URL.
+            URL. The image will be optimized, converted to WebP, stored in Blob,
+            and saved in MongoDB automatically.
           </p>
         </div>
 
@@ -316,14 +701,14 @@ export default function AdminMediaPage() {
 
         <div className="rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50 p-6">
           <div className="flex flex-col items-center justify-center text-center">
-            {previewUrl ? (
+            {uploadPreviewUrl ? (
               <img
-                src={previewUrl}
-                alt="Selected media preview"
+                src={uploadPreviewUrl}
+                alt="New selected media preview"
                 onError={() => {
                   if (isUrlMode) {
                     setError(
-                      "This image URL could not be previewed. Use a direct public image URL.",
+                      "This URL could not be previewed. Use a direct public image URL.",
                     );
                   }
                 }}
@@ -346,7 +731,7 @@ export default function AdminMediaPage() {
               Choose image from device
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 disabled={isUrlMode}
                 className="hidden"
                 onChange={handleFileChange}
@@ -373,9 +758,11 @@ export default function AdminMediaPage() {
             )}
 
             <p className="mt-4 max-w-md text-xs leading-5 text-zinc-500">
-              Local files: JPG, PNG, or WebP, maximum 10 MB before optimization.
-              Collection images target about 300 KB, products about 450 KB, and
-              banners about 700 KB.
+              Local files: JPG, PNG, WebP, or GIF, maximum 10 MB before optimization.
+Animated GIF and animated WebP files keep their motion only when animation
+preservation is enabled in the upload service.
+              Category images target about 300 KB, product images target about
+              450 KB, and banners target about 700 KB.
             </p>
           </div>
         </div>
@@ -391,14 +778,14 @@ export default function AdminMediaPage() {
               <FiLoader size={17} className="animate-spin" />
               {isUrlMode
                 ? "Importing and optimizing image..."
-                : "Optimizing and uploading..."}
+                : "Optimizing and uploading image..."}
             </>
           ) : (
             <>
               <FiUpload size={17} />
               {isUrlMode
-                ? "Import image to Vercel Blob"
-                : "Optimize and upload to Vercel Blob"}
+                ? "Import and publish image"
+                : "Optimize and publish image"}
             </>
           )}
         </button>
@@ -413,22 +800,31 @@ export default function AdminMediaPage() {
 
             <div>
               <h2 className="text-lg font-black text-emerald-950">
-                Image uploaded successfully
+                Image saved and published
               </h2>
 
               <p className="mt-1 text-sm text-emerald-800">
-                {uploadedMedia.source === "url"
-                  ? "The external image was imported, optimized, and stored in Vercel Blob."
-                  : "The image was optimized and stored in Vercel Blob."}
+                The image is stored in Vercel Blob and saved in MongoDB
+                automatically.
               </p>
             </div>
           </div>
 
           <img
             src={uploadedMedia.imageUrl}
-            alt="Uploaded Blob image"
+            alt="Newly published store media"
             className="mt-5 h-64 w-full rounded-2xl bg-white object-contain"
           />
+
+          <div className="mt-5 rounded-xl border border-emerald-200 bg-white/70 p-4">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-emerald-700">
+              Published destination
+            </p>
+
+            <code className="mt-2 block break-all text-sm font-black text-emerald-950">
+              {uploadedMedia.destination}
+            </code>
+          </div>
 
           {uploadedMedia.source === "device" && (
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -454,52 +850,18 @@ export default function AdminMediaPage() {
             </div>
           )}
 
-          {uploadedMedia.source === "url" && (
-            <div className="mt-5 rounded-xl border border-emerald-200 bg-white/70 p-4">
-              <p className="text-sm font-black text-emerald-950">
-                Image imported and optimized
-              </p>
-
-              <p className="mt-1 text-sm leading-6 text-emerald-800">
-                The original external image was converted to an optimized WebP
-                asset and saved under your chosen Blob destination.
-              </p>
-            </div>
-          )}
-
-          <div className="mt-5">
-            <p className="mb-2 text-sm font-bold text-emerald-950">
-              Vercel Blob URL
-            </p>
-
-            <div className="flex gap-2">
-              <input
-                readOnly
-                value={uploadedMedia.imageUrl}
-                className="min-w-0 flex-1 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-xs text-zinc-700 outline-none"
-              />
-
-              <button
-                type="button"
-                onClick={copyUrl}
-                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-extrabold text-white transition hover:bg-emerald-800"
-              >
-                {copied ? <FiCheckCircle size={16} /> : <FiCopy size={16} />}
-
-                {copied ? "Copied" : "Copy"}
-              </button>
-            </div>
-          </div>
-
           <div className="mt-5 rounded-xl border border-emerald-200 bg-white/70 p-4">
             <p className="text-sm font-black text-emerald-950">
-              Image saved and published
+              Website update complete
             </p>
 
             <p className="mt-1 text-sm leading-6 text-emerald-800">
-              This image has been stored in Vercel Blob and its URL has been
-              saved in MongoDB automatically. Refresh the relevant department
-              page to see the updated image.
+              Refresh the relevant category page to view the new published
+              image. You do not need to copy the Blob URL or edit
+              <code className="mx-1 rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-bold">
+                departmentData.js
+              </code>
+              .
             </p>
           </div>
         </section>

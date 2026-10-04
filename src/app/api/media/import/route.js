@@ -4,7 +4,13 @@ import { connectDatabase } from "../../../../lib/db";
 import Media from "../../../../models/Media";
 export const runtime = "nodejs";
 
-const allowedFolders = ["products/", "categories/", "banners/", "logos/"];
+const allowedFolders = [
+  "products/",
+  "categories/",
+  "banners/",
+  "logos/",
+  "promos/",
+];
 
 const allowedHosts = ["images.pexels.com"];
 
@@ -41,9 +47,12 @@ function getMediaType(destination) {
     return "logo";
   }
 
+  if (destination.startsWith("promos/")) {
+    return "promo";
+  }
+
   return "other";
 }
-
 function getImageOptions(destination) {
   if (destination.startsWith("banners/")) {
     return {
@@ -121,7 +130,7 @@ export async function POST(request) {
       return NextResponse.json(
         {
           message:
-            "Destination must begin with products/, categories/, banners/, or logos/.",
+            "Destination must begin with products/, categories/, banners/, logos/, or promos/.",
         },
         {
           status: 400,
@@ -214,17 +223,6 @@ export async function POST(request) {
         pathname: blob.pathname,
         key: savedMedia.key,
         type: savedMedia.type,
-        originalSize: 0,
-        compressedSize: 0,
-      },
-      {
-        status: 200,
-      },
-    );
-    return NextResponse.json(
-      {
-        imageUrl: blob.url,
-        pathname: blob.pathname,
         originalSize: 0,
         compressedSize: 0,
       },

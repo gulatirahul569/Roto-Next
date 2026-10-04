@@ -10,13 +10,15 @@ const ALLOWED_IMAGE_TYPES = [
 const MAX_ORIGINAL_SIZE = 10 * 1024 * 1024;
 
 function getSafeFileName(value = "store-image") {
-  return String(value)
-    .toLowerCase()
-    .trim()
-    .replace(/\.[^/.]+$/, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 80) || "store-image";
+  return (
+    String(value)
+      .toLowerCase()
+      .trim()
+      .replace(/\.[^/.]+$/, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 80) || "store-image"
+  );
 }
 
 function getUploadSettings(destination) {
@@ -34,6 +36,13 @@ function getUploadSettings(destination) {
     };
   }
 
+  if (destination.startsWith("logos/")) {
+    return {
+      maxSizeMB: 0.25,
+      maxWidthOrHeight: 1000,
+    };
+  }
+
   return {
     maxSizeMB: 0.3,
     maxWidthOrHeight: 1200,
@@ -46,16 +55,47 @@ function isAllowedDestination(destination) {
     "categories/",
     "banners/",
     "logos/",
+    "promos/",
   ].some((folder) => destination.startsWith(folder));
 }
 
-export async function uploadStoreMedia(file, token, destination) {
+function getMediaType(destination) {
+  if (destination.startsWith("banners/")) {
+    return "banner";
+  }
+
+  if (destination.startsWith("categories/")) {
+    return "subcategory";
+  }
+
+  if (destination.startsWith("products/")) {
+    return "product";
+  }
+
+  if (destination.startsWith("logos/")) {
+    return "logo";
+  }
+
+  if (destination.startsWith("promos/")) {
+    return "promo";
+  }
+
+  return "other";
+}
+
+export async function uploadStoreMedia(
+  file,
+  token,
+  destination,
+) {
   if (!file) {
     throw new Error("Please select an image file.");
   }
 
   if (!token) {
-    throw new Error("Your admin session has expired. Please log in again.");
+    throw new Error(
+      "Your admin session has expired. Please log in again.",
+    );
   }
 
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
@@ -63,17 +103,20 @@ export async function uploadStoreMedia(file, token, destination) {
   }
 
   if (file.size > MAX_ORIGINAL_SIZE) {
-    throw new Error("Original image must be 10 MB or smaller.");
+    throw new Error(
+      "Original image must be 10 MB or smaller.",
+    );
   }
 
   const normalizedDestination = String(destination || "")
     .trim()
     .replace(/^\/+/, "")
-    .replace(/\s+/g, "-");
+    .replace(/\s+/g, "-")
+    .toLowerCase();
 
   if (!isAllowedDestination(normalizedDestination)) {
     throw new Error(
-      "Use a path beginning with products/, categories/, banners/, or logos/.",
+      "Invalid media destination selected.",
     );
   }
 
@@ -102,12 +145,16 @@ export async function uploadStoreMedia(file, token, destination) {
     handleUploadUrl: "/api/blob/upload",
     clientPayload: JSON.stringify({
       token,
+      destination: normalizedDestination,
+      mediaType: getMediaType(normalizedDestination),
     }),
   });
 
   return {
     imageUrl: blob.url,
     pathname: blob.pathname,
+    destination: normalizedDestination,
+    mediaType: getMediaType(normalizedDestination),
     originalSize: file.size,
     compressedSize: compressedFile.size,
   };
@@ -123,7 +170,21 @@ export async function importStoreMediaFromUrl(
   }
 
   if (!token) {
-    throw new Error("Your admin session has expired. Please log in again.");
+    throw new Error(
+      "Your admin session has expired. Please log in again.",
+    );
+  }
+
+  const normalizedDestination = String(destination || "")
+    .trim()
+    .replace(/^\/+/, "")
+    .replace(/\s+/g, "-")
+    .toLowerCase();
+
+  if (!isAllowedDestination(normalizedDestination)) {
+    throw new Error(
+      "Invalid media destination selected.",
+    );
   }
 
   const response = await fetch("/api/media/import", {
@@ -134,15 +195,21 @@ export async function importStoreMediaFromUrl(
     },
     body: JSON.stringify({
       imageUrl,
-      destination,
+      destination: normalizedDestination,
     }),
   });
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Unable to import image from URL.");
+    throw new Error(
+      data.message || "Unable to import image from URL.",
+    );
   }
 
-  return data;
+  return {
+    ...data,
+    destination: normalizedDestination,
+    mediaType: getMediaType(normalizedDestination),
+  };
 }

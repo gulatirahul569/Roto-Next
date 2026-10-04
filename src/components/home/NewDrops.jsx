@@ -41,7 +41,7 @@ function getReviewInfo(product) {
 
 function DropCardSkeleton() {
   return (
-    <div className="h-[340px] animate-pulse rounded-3xl bg-zinc-200 sm:h-96" />
+    <div className="h-[340px] animate-pulse rounded-3xl  sm:h-96" />
   );
 }
 
@@ -59,7 +59,7 @@ function DropCard({ product }) {
   return (
     <Link
       href={`/product/${product._id}`}
-      className="group/card relative block h-[340px] overflow-hidden rounded-3xl border border-black/5 bg-zinc-200 shadow-xl transition-transform duration-300 hover:-translate-y-2 sm:h-96"
+      className="group/card relative block  h-[340px] overflow-hidden rounded-3xl border border-black/5  shadow-xl transition-transform duration-300 hover:-translate-y-2 sm:h-96"
     >
       {image && (
         <img
@@ -176,9 +176,9 @@ export default function NewDrops() {
   const marqueeDuration = baseSet.length * SECONDS_PER_CARD;
 
   return (
-    <section className="overflow-hidden bg-zinc-50 py-20 sm:py-24">
-      <div className="mx-auto flex max-w-full justify-center px-6 lg:px-8">
-        <div className="flex max-w-2xl flex-col items-center text-center">
+    <section className="overflow-hidden py-8 bg-gray-50">
+      <div className="mx-auto  max-w-full  px-6 lg:px-8">
+        <div className="flex max-w-2xl flex-col">
           <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-amber-700">
             Fresh arrivals
           </p>

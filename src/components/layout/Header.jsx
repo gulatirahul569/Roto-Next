@@ -96,6 +96,7 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [openDesktopDepartment, setOpenDesktopDepartment] = useState("");
   const [openMobileDepartment, setOpenMobileDepartment] = useState("");
+  const [logoMedia, setLogoMedia] = useState({});
 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -108,6 +109,9 @@ export default function Header() {
 
   const isTransparent = hasHero && !isScrolled && !isMobileMenuOpen;
 
+  const defaultLogoUrl = logoMedia["logos/roto-logo"] || LOGO_DEFAULT;
+
+  const whiteLogoUrl = logoMedia["logos/roto-logo-white"] || LOGO_WHITE;
   const closeAllMenus = () => {
     setIsMobileMenuOpen(false);
     setIsAccountMenuOpen(false);
@@ -121,6 +125,36 @@ export default function Header() {
     setOpenMobileDepartment("");
     setIsMobileMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadLogoMedia() {
+      try {
+        const response = await fetch("/api/media", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Unable to load logo media.");
+        }
+
+        const data = await response.json();
+
+        if (isActive) {
+          setLogoMedia(data.media || {});
+        }
+      } catch (logoError) {
+        console.error("Header logo loading error:", logoError);
+      }
+    }
+
+    loadLogoMedia();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
@@ -270,7 +304,7 @@ export default function Header() {
               className="relative block shrink-0"
             >
               <img
-                src={LOGO_DEFAULT}
+                src={defaultLogoUrl}
                 alt="ROTO"
                 className={`h-16 object-contain transition-opacity duration-300 md:h-20 ${
                   isTransparent ? "opacity-0" : "opacity-100"
@@ -278,7 +312,7 @@ export default function Header() {
               />
 
               <img
-                src={LOGO_WHITE}
+                src={whiteLogoUrl}
                 alt=""
                 aria-hidden="true"
                 className={`absolute inset-0 size-full object-contain transition-opacity duration-300 ${

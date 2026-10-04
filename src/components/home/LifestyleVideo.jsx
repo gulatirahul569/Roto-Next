@@ -107,9 +107,9 @@ export default function LifestyleVideo() {
   return (
     <section
       ref={sectionRef}
-      className="overflow-hidden bg-gray-50 px-6 py-16 sm:py-20 md:px-8 md:py-24 lg:px-12"
+      className="overflow-hidden bg-gray-50 px-6 py-6 pb-12"
     >
-      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 sm:gap-14 md:grid-cols-2 md:gap-12 lg:gap-16 lg:px-6">
+      <div className="mx-auto grid max-w-full grid-cols-1 items-center gap-12 sm:gap-14 md:grid-cols-2 md:gap-12 lg:gap-16 lg:px-6">
         {/* ================= LEFT: TEXT ================= */}
         <motion.div
           variants={container}

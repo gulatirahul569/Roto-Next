@@ -19,13 +19,7 @@ const MediaSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: [
-        "banner",
-        "subcategory",
-        "product",
-        "logo",
-        "other",
-      ],
+      enum: ["banner", "subcategory", "product", "logo", "promo", "other"],
       default: "other",
       trim: true,
       lowercase: true,
@@ -36,8 +30,6 @@ const MediaSchema = new mongoose.Schema(
   },
 );
 
-const Media =
-  mongoose.models.Media ||
-  mongoose.model("Media", MediaSchema);
+const Media = mongoose.models.Media || mongoose.model("Media", MediaSchema);
 
 export default Media;
