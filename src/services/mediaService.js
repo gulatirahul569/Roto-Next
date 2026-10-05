@@ -1,11 +1,7 @@
 import imageCompression from "browser-image-compression";
 import { upload } from "@vercel/blob/client";
 
-const ALLOWED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-];
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const MAX_ORIGINAL_SIZE = 10 * 1024 * 1024;
 
@@ -56,6 +52,7 @@ function isAllowedDestination(destination) {
     "banners/",
     "logos/",
     "promos/",
+    "home/categories/",
   ].some((folder) => destination.startsWith(folder));
 }
 
@@ -66,6 +63,10 @@ function getMediaType(destination) {
 
   if (destination.startsWith("categories/")) {
     return "subcategory";
+  }
+
+  if (destination.startsWith("home/categories/")) {
+    return "category-showcase";
   }
 
   if (destination.startsWith("products/")) {
@@ -82,20 +83,13 @@ function getMediaType(destination) {
 
   return "other";
 }
-
-export async function uploadStoreMedia(
-  file,
-  token,
-  destination,
-) {
+export async function uploadStoreMedia(file, token, destination) {
   if (!file) {
     throw new Error("Please select an image file.");
   }
 
   if (!token) {
-    throw new Error(
-      "Your admin session has expired. Please log in again.",
-    );
+    throw new Error("Your admin session has expired. Please log in again.");
   }
 
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
@@ -103,9 +97,7 @@ export async function uploadStoreMedia(
   }
 
   if (file.size > MAX_ORIGINAL_SIZE) {
-    throw new Error(
-      "Original image must be 10 MB or smaller.",
-    );
+    throw new Error("Original image must be 10 MB or smaller.");
   }
 
   const normalizedDestination = String(destination || "")
@@ -115,9 +107,7 @@ export async function uploadStoreMedia(
     .toLowerCase();
 
   if (!isAllowedDestination(normalizedDestination)) {
-    throw new Error(
-      "Invalid media destination selected.",
-    );
+    throw new Error("Invalid media destination selected.");
   }
 
   const settings = getUploadSettings(normalizedDestination);
@@ -133,10 +123,7 @@ export async function uploadStoreMedia(
     normalizedDestination.split("/").pop() || file.name,
   );
 
-  const folderPath = normalizedDestination
-    .split("/")
-    .slice(0, -1)
-    .join("/");
+  const folderPath = normalizedDestination.split("/").slice(0, -1).join("/");
 
   const pathname = `${folderPath}/${safeFileName}.webp`;
 
@@ -160,19 +147,13 @@ export async function uploadStoreMedia(
   };
 }
 
-export async function importStoreMediaFromUrl(
-  imageUrl,
-  token,
-  destination,
-) {
+export async function importStoreMediaFromUrl(imageUrl, token, destination) {
   if (!imageUrl) {
     throw new Error("Please paste an image URL.");
   }
 
   if (!token) {
-    throw new Error(
-      "Your admin session has expired. Please log in again.",
-    );
+    throw new Error("Your admin session has expired. Please log in again.");
   }
 
   const normalizedDestination = String(destination || "")
@@ -182,9 +163,7 @@ export async function importStoreMediaFromUrl(
     .toLowerCase();
 
   if (!isAllowedDestination(normalizedDestination)) {
-    throw new Error(
-      "Invalid media destination selected.",
-    );
+    throw new Error("Invalid media destination selected.");
   }
 
   const response = await fetch("/api/media/import", {
@@ -202,9 +181,7 @@ export async function importStoreMediaFromUrl(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      data.message || "Unable to import image from URL.",
-    );
+    throw new Error(data.message || "Unable to import image from URL.");
   }
 
   return {
