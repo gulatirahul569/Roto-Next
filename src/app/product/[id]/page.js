@@ -144,12 +144,40 @@ export default function ProductDetailsPage() {
   const isExternalProduct =
     product.purchaseMode === "EXTERNAL_LINK" || isAmazonProduct;
   const isInStock = isExternalProduct ? true : Number(product.stock) > 0;
-  const isLowStock = !isExternalProduct && isInStock && Number(product.stock) <= 5;
+  const isLowStock =
+    !isExternalProduct && isInStock && Number(product.stock) <= 5;
   const externalButtonText =
     product.externalButtonText ||
     (isAmazonProduct ? "Explore on Amazon" : "Explore Product");
-  const categoryHref = `/category/${product.newCategory || "all"}`;
+  const departmentSlug = String(product.department || "")
+    .trim()
+    .toLowerCase();
+
+  const subcategorySlug = String(product.subcategory || "")
+    .trim()
+    .toLowerCase();
+
+  const categoryHref =
+    departmentSlug && departmentSlug !== "all"
+      ? subcategorySlug
+        ? `/category/${departmentSlug}/${subcategorySlug}`
+        : `/category/${departmentSlug}`
+      : "/category/all";
+
   const highlights = getHighlights(product.description);
+
+  const productPrice = Number(product.price || 0);
+
+  const compareAtPrice = Number(product.compareAtPrice || 0);
+
+  const hasDiscount =
+    !isExternalProduct && compareAtPrice > productPrice && productPrice > 0;
+
+  const discountPercentage = hasDiscount
+    ? Math.round(((compareAtPrice - productPrice) / compareAtPrice) * 100)
+    : 0;
+
+  const savingsAmount = hasDiscount ? compareAtPrice - productPrice : 0;
 
   const handleToggleWishlist = () => {
     toggleWishlist(product);
@@ -224,7 +252,7 @@ export default function ProductDetailsPage() {
               href={categoryHref}
               className="mt-1 inline-block text-sm text-[#007185] hover:text-[#C7511F] hover:underline"
             >
-              Visit the {product.category || "Roto"} store
+              Visit the {product.subcategory || "Roto"} store
             </Link>
 
             <div className="mt-2 flex items-center gap-2 text-sm">
@@ -253,12 +281,40 @@ export default function ProductDetailsPage() {
               </div>
             ) : (
               <div>
-                <p className="flex items-start gap-1 text-zinc-950">
-                  <span className="mt-1.5 text-sm">₹</span>
+                {hasDiscount && (
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-rose-50 px-2 py-1 text-xs font-extrabold text-rose-700">
+                      {discountPercentage}% OFF
+                    </span>
+
+                    <span className="text-sm font-medium text-zinc-500">
+                      Save {formatPrice(savingsAmount)}
+                    </span>
+                  </div>
+                )}
+
+                <p className="flex items-baseline gap-1 text-zinc-950">
+                  <span className="text-sm">₹</span>
+
                   <span className="text-3xl font-medium">
-                    {formatPrice(product.price).replace(/[^\d,]/g, "")}
+                    {formatPrice(productPrice).replace(/[^\d,]/g, "")}
                   </span>
                 </p>
+
+                {hasDiscount && (
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-zinc-500">M.R.P.:</span>
+
+                    <span className="text-sm text-zinc-500 line-through">
+                      {formatPrice(compareAtPrice)}
+                    </span>
+
+                    <span className="text-sm font-bold text-[#007600]">
+                      ({discountPercentage}% off)
+                    </span>
+                  </div>
+                )}
+
                 <p className="mt-1 text-sm text-zinc-600">
                   Inclusive of all taxes
                 </p>
@@ -329,9 +385,23 @@ export default function ProductDetailsPage() {
               ) : (
                 <>
                   {!isExternalProduct && (
-                    <p className="text-2xl font-medium text-zinc-950">
-                      {formatPrice(product.price)}
-                    </p>
+                    <div>
+                      <p className="text-2xl font-medium text-zinc-950">
+                        {formatPrice(productPrice)}
+                      </p>
+
+                      {hasDiscount && (
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <span className="text-sm text-zinc-500 line-through">
+                            {formatPrice(compareAtPrice)}
+                          </span>
+
+                          <span className="text-sm font-bold text-[#007600]">
+                            {discountPercentage}% off
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   <div className="mt-3">
@@ -456,13 +526,23 @@ export default function ProductDetailsPage() {
           </a>
         ) : (
           <div className="flex items-center gap-3">
-            <p className="text-lg font-medium text-zinc-950">
-              {formatPrice(product.price)}
-            </p>
+            <div>
+              <p className="text-lg font-medium text-zinc-950">
+                {formatPrice(productPrice)}
+              </p>
+
+              {hasDiscount && (
+                <p className="mt-0.5 text-xs font-bold text-[#007600]">
+                  {discountPercentage}% off
+                </p>
+              )}
+            </div>
             <button
               type="button"
               disabled={!isInStock}
-              onClick={cartItem ? () => router.push("/checkout") : handleAddToCart}
+              onClick={
+                cartItem ? () => router.push("/checkout") : handleAddToCart
+              }
               className="h-11 flex-1 rounded-full bg-[#FFD814] text-sm font-medium text-zinc-950 disabled:bg-zinc-200 disabled:text-zinc-500"
             >
               {!isInStock

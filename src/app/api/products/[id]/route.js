@@ -54,12 +54,9 @@ function isAmazonUrl(value) {
   try {
     const hostname = new URL(value).hostname.toLowerCase();
 
-    return [
-      "amazon.in",
-      "www.amazon.in",
-      "amzn.in",
-      "amzn.to",
-    ].includes(hostname);
+    return ["amazon.in", "www.amazon.in", "amzn.in", "amzn.to"].includes(
+      hostname,
+    );
   } catch {
     return false;
   }
@@ -74,9 +71,7 @@ function getDepartment(value, fallback = "ALL") {
     .trim()
     .toUpperCase();
 
-  return VALID_DEPARTMENTS.includes(department)
-    ? department
-    : fallback;
+  return VALID_DEPARTMENTS.includes(department) ? department : fallback;
 }
 
 function getSubcategory(value) {
@@ -179,14 +174,10 @@ export async function PUT(request, { params }) {
       : product.source || "INVENTORY";
 
     const requestedPurchaseMode =
-      body.purchaseMode === "EXTERNAL_LINK"
-        ? "EXTERNAL_LINK"
-        : "CHECKOUT";
+      body.purchaseMode === "EXTERNAL_LINK" ? "EXTERNAL_LINK" : "CHECKOUT";
 
     const purchaseMode =
-      source === "AMAZON"
-        ? "EXTERNAL_LINK"
-        : requestedPurchaseMode;
+      source === "AMAZON" ? "EXTERNAL_LINK" : requestedPurchaseMode;
 
     const name = stringValue(body.name || body.title || product.name);
 
@@ -199,14 +190,10 @@ export async function PUT(request, { params }) {
       product.department || "ALL",
     );
 
-    const subcategory = getSubcategory(
-      body.subcategory ?? product.subcategory,
-    );
+    const subcategory = getSubcategory(body.subcategory ?? product.subcategory);
 
     const externalUrl =
-      purchaseMode === "EXTERNAL_LINK"
-        ? stringValue(body.externalUrl)
-        : "";
+      purchaseMode === "EXTERNAL_LINK" ? stringValue(body.externalUrl) : "";
 
     if (!name) {
       return NextResponse.json(
@@ -339,9 +326,7 @@ export async function PUT(request, { params }) {
     product.currency = "INR";
 
     product.isActive =
-      typeof body.isActive === "boolean"
-        ? body.isActive
-        : product.isActive;
+      typeof body.isActive === "boolean" ? body.isActive : product.isActive;
 
     product.isFeatured =
       typeof body.isFeatured === "boolean"
@@ -351,14 +336,36 @@ export async function PUT(request, { params }) {
     product.source = source;
     product.purchaseMode = purchaseMode;
 
-    product.price = isExternalProduct
+    const sellingPrice = isExternalProduct
       ? 0
       : Math.max(0, numberOrDefault(body.price, product.price || 0));
 
-    product.compareAtPrice =
-      isExternalProduct || !body.compareAtPrice
+    const compareAtPrice =
+      isExternalProduct ||
+      body.compareAtPrice === null ||
+      body.compareAtPrice === undefined ||
+      body.compareAtPrice === ""
         ? null
         : Math.max(0, numberOrDefault(body.compareAtPrice));
+
+    if (
+      compareAtPrice !== null &&
+      compareAtPrice > 0 &&
+      compareAtPrice <= sellingPrice
+    ) {
+      return NextResponse.json(
+        {
+          message: "Compare-at price must be greater than the selling price.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    product.price = sellingPrice;
+
+    product.compareAtPrice = compareAtPrice;
 
     product.stock = isExternalProduct
       ? 0
@@ -389,10 +396,7 @@ export async function PUT(request, { params }) {
 
       vendorProductId:
         source === "VENDOR"
-          ? stringValue(
-              body.vendor?.vendorProductId ||
-                body.vendorProductId,
-            )
+          ? stringValue(body.vendor?.vendorProductId || body.vendorProductId)
           : "",
 
       vendorUrl:
@@ -412,9 +416,7 @@ export async function PUT(request, { params }) {
           : "",
 
       associateTag:
-        source === "AMAZON"
-          ? stringValue(body.amazon?.associateTag)
-          : "",
+        source === "AMAZON" ? stringValue(body.amazon?.associateTag) : "",
     };
 
     await product.save();

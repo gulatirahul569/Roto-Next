@@ -149,8 +149,7 @@ function EditProductModal({
   const isAmazonProduct = product.source === "AMAZON";
 
   const isExternalProduct =
-    product.purchaseMode === "EXTERNAL_LINK" ||
-    isAmazonProduct;
+    product.purchaseMode === "EXTERNAL_LINK" || isAmazonProduct;
 
   const isVendorProduct = product.source === "VENDOR";
 
@@ -242,25 +241,18 @@ function EditProductModal({
                   name="subcategory"
                   value={product.subcategory || ""}
                   onChange={onChange}
-                  disabled={
-                    !product.department ||
-                    product.department === "ALL"
-                  }
+                  disabled={!product.department || product.department === "ALL"}
                   className="w-full rounded-xl border border-violet-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-violet-500 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
                 >
                   <option value="">
-                    {product.department &&
-                    product.department !== "ALL"
+                    {product.department && product.department !== "ALL"
                       ? "Select subcategory"
                       : "Choose a department first"}
                   </option>
 
                   {getSubcategoryOptions(product.department).map(
                     (subcategory) => (
-                      <option
-                        key={subcategory.slug}
-                        value={subcategory.slug}
-                      >
+                      <option key={subcategory.slug} value={subcategory.slug}>
                         {subcategory.title}
                       </option>
                     ),
@@ -274,8 +266,7 @@ function EditProductModal({
               product.subcategory && (
                 <p className="mt-4 rounded-xl border border-violet-200 bg-white/70 px-4 py-3 text-xs font-bold text-violet-900">
                   Product route: /category/
-                  {product.department.toLowerCase()}/
-                  {product.subcategory}
+                  {product.department.toLowerCase()}/{product.subcategory}
                 </p>
               )}
           </div>
@@ -287,8 +278,8 @@ function EditProductModal({
               </p>
 
               <p className="mt-1 text-xs leading-5 text-orange-800">
-                Customers cannot add this product to the Roto cart. They will
-                be sent to Amazon through the affiliate link below.
+                Customers cannot add this product to the Roto cart. They will be
+                sent to Amazon through the affiliate link below.
               </p>
             </div>
           )}
@@ -386,7 +377,6 @@ function EditProductModal({
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-zinc-950 px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-zinc-800">
                     <FiUpload size={16} />
                     Replace main image
-
                     <input
                       type="file"
                       accept="image/*"
@@ -407,7 +397,6 @@ function EditProductModal({
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-zinc-300 bg-white px-4 py-2.5 text-sm font-extrabold text-zinc-700 transition hover:bg-zinc-100">
                     <FiPlus size={16} />
                     Add gallery image
-
                     <input
                       type="file"
                       accept="image/*"
@@ -502,7 +491,7 @@ function EditProductModal({
               </div>
             )}
           </div>
-                    {isAmazonProduct && (
+          {isAmazonProduct && (
             <div className="space-y-5 rounded-2xl border border-orange-200 bg-orange-50 p-5">
               <div>
                 <p className="text-sm font-black text-orange-950">
@@ -638,65 +627,88 @@ function EditProductModal({
                 className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
               >
                 <option value="CHECKOUT">Roto checkout</option>
-                <option value="EXTERNAL_LINK">
-                  Open external seller link
-                </option>
+                <option value="EXTERNAL_LINK">Open external seller link</option>
               </select>
             </label>
           )}
 
-          {!isAmazonProduct &&
-            product.purchaseMode === "EXTERNAL_LINK" && (
-              <div className="space-y-5 rounded-2xl border border-purple-200 bg-purple-50 p-5">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-bold text-zinc-700">
-                    External product URL
-                  </span>
-
-                  <input
-                    name="externalUrl"
-                    type="url"
-                    value={product.externalUrl || ""}
-                    onChange={onChange}
-                    placeholder="https://partner.example/product"
-                    required
-                    className="w-full rounded-xl border border-purple-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-purple-500"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm font-bold text-zinc-700">
-                    Customer button text
-                  </span>
-
-                  <input
-                    name="externalButtonText"
-                    value={product.externalButtonText || ""}
-                    onChange={onChange}
-                    placeholder="Explore Product"
-                    className="w-full rounded-xl border border-purple-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-purple-500"
-                  />
-                </label>
-              </div>
-            )}
-
-          {!isExternalProduct && (
-            <div className="grid gap-5 sm:grid-cols-2">
+          {!isAmazonProduct && product.purchaseMode === "EXTERNAL_LINK" && (
+            <div className="space-y-5 rounded-2xl border border-purple-200 bg-purple-50 p-5">
               <label className="block">
                 <span className="mb-2 block text-sm font-bold text-zinc-700">
-                  Price
+                  External product URL
+                </span>
+
+                <input
+                  name="externalUrl"
+                  type="url"
+                  value={product.externalUrl || ""}
+                  onChange={onChange}
+                  placeholder="https://partner.example/product"
+                  required
+                  className="w-full rounded-xl border border-purple-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-purple-500"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-bold text-zinc-700">
+                  Customer button text
+                </span>
+
+                <input
+                  name="externalButtonText"
+                  value={product.externalButtonText || ""}
+                  onChange={onChange}
+                  placeholder="Explore Product"
+                  className="w-full rounded-xl border border-purple-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-purple-500"
+                />
+              </label>
+            </div>
+          )}
+
+          {!isExternalProduct && (
+            <div className="grid gap-5 sm:grid-cols-3">
+              <label className="block">
+                <span className="mb-2 block text-sm font-bold text-zinc-700">
+                  Selling price
                 </span>
 
                 <input
                   type="number"
                   min="0"
+                  step="0.01"
                   name="price"
                   value={product.price ?? ""}
                   onChange={onChange}
-                  placeholder="0"
+                  placeholder="899"
                   required
                   className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
                 />
+
+                <span className="mt-1 block text-xs text-zinc-500">
+                  Final customer price.
+                </span>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-bold text-zinc-700">
+                  Compare-at price
+                </span>
+
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  name="compareAtPrice"
+                  value={product.compareAtPrice ?? ""}
+                  onChange={onChange}
+                  placeholder="1299"
+                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
+                />
+
+                <span className="mt-1 block text-xs text-zinc-500">
+                  Original price shown crossed out.
+                </span>
               </label>
 
               <label className="block">
@@ -707,10 +719,11 @@ function EditProductModal({
                 <input
                   type="number"
                   min="0"
+                  step="1"
                   name="stock"
                   value={product.stock ?? ""}
                   onChange={onChange}
-                  placeholder="0"
+                  placeholder="10"
                   required
                   className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
                 />
@@ -776,8 +789,8 @@ function EditProductModal({
               </span>
 
               <span className="mt-0.5 block text-xs leading-5 text-amber-800">
-                Display this product in the homepage New Drops section and
-                New in department rows.
+                Display this product in the homepage New Drops section and New
+                in department rows.
               </span>
             </span>
           </label>
@@ -816,12 +829,7 @@ function EditProductModal({
   );
 }
 
-function DeleteProductModal({
-  product,
-  isDeleting,
-  onClose,
-  onConfirm,
-}) {
+function DeleteProductModal({ product, isDeleting, onClose, onConfirm }) {
   if (!product) {
     return null;
   }
@@ -839,10 +847,8 @@ function DeleteProductModal({
 
         <p className="mt-3 text-sm leading-6 text-zinc-600">
           You are about to permanently delete{" "}
-          <span className="font-bold text-zinc-950">
-            {product.name}
-          </span>
-          . This action cannot be undone.
+          <span className="font-bold text-zinc-950">{product.name}</span>. This
+          action cannot be undone.
         </p>
 
         <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -958,7 +964,7 @@ export default function AdminProductsPage() {
       );
     });
   }, [products, searchTerm]);
-    const openProductEditor = (product) => {
+  const openProductEditor = (product) => {
     const images = getProductImages(product);
 
     setEditingProduct({
@@ -1034,8 +1040,7 @@ export default function AdminProductsPage() {
           ...currentProduct,
           purchaseMode: value,
           externalButtonText:
-            value === "EXTERNAL_LINK" &&
-            !currentProduct.externalButtonText
+            value === "EXTERNAL_LINK" && !currentProduct.externalButtonText
               ? "Explore Product"
               : currentProduct.externalButtonText,
         };
@@ -1106,10 +1111,7 @@ export default function AdminProductsPage() {
 
         const updatedImages =
           uploadMode === "main"
-            ? [
-                imageUrl,
-                ...currentImages.filter((image) => image !== imageUrl),
-              ]
+            ? [imageUrl, ...currentImages.filter((image) => image !== imageUrl)]
             : [...currentImages, imageUrl];
 
         const images = Array.from(new Set(updatedImages));
@@ -1150,10 +1152,7 @@ export default function AdminProductsPage() {
       }
 
       const images = Array.from(
-        new Set([
-          ...getProductImages(currentProduct),
-          cleanedImageUrl,
-        ]),
+        new Set([...getProductImages(currentProduct), cleanedImageUrl]),
       );
 
       return {
@@ -1218,13 +1217,31 @@ export default function AdminProductsPage() {
       const isAmazonProduct = editingProduct.source === "AMAZON";
 
       const isExternalProduct =
-        editingProduct.purchaseMode === "EXTERNAL_LINK" ||
-        isAmazonProduct;
+        editingProduct.purchaseMode === "EXTERNAL_LINK" || isAmazonProduct;
 
       const galleryImages = getProductImages(editingProduct);
 
       if (galleryImages.length === 0) {
         throw new Error("Please add at least one product image.");
+      }
+
+      const sellingPrice = isExternalProduct
+        ? 0
+        : Number(editingProduct.price || 0);
+
+      const compareAtPrice =
+        !isExternalProduct && editingProduct.compareAtPrice
+          ? Number(editingProduct.compareAtPrice)
+          : null;
+
+      if (
+        compareAtPrice !== null &&
+        compareAtPrice > 0 &&
+        compareAtPrice <= sellingPrice
+      ) {
+        throw new Error(
+          "Compare-at price must be greater than the selling price.",
+        );
       }
 
       const updatedProduct = {
@@ -1233,13 +1250,10 @@ export default function AdminProductsPage() {
         image: galleryImages[0],
         images: galleryImages,
 
-        price: isExternalProduct
-          ? 0
-          : Number(editingProduct.price || 0),
+        price: sellingPrice,
+        compareAtPrice,
 
-        stock: isExternalProduct
-          ? 0
-          : Number(editingProduct.stock || 0),
+        stock: isExternalProduct ? 0 : Number(editingProduct.stock || 0),
 
         purchaseMode: isAmazonProduct
           ? "EXTERNAL_LINK"
@@ -1384,7 +1398,7 @@ export default function AdminProductsPage() {
       </section>
 
       <section className="mt-6 overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
-              {isLoading ? (
+        {isLoading ? (
           <div className="space-y-3 p-6">
             {Array.from({ length: 6 }).map((_, index) => (
               <div
@@ -1431,8 +1445,7 @@ export default function AdminProductsPage() {
                       product.source === "AMAZON";
 
                     const isNewDrop =
-                      String(product.newCategory || "").toLowerCase() ===
-                      "new";
+                      String(product.newCategory || "").toLowerCase() === "new";
 
                     const imageCount = getProductImages(product).length;
 
@@ -1451,9 +1464,7 @@ export default function AdminProductsPage() {
                               </p>
 
                               <p className="mt-1 max-w-56 truncate text-xs text-zinc-400">
-                                {product.brand
-                                  ? `${product.brand} · `
-                                  : ""}
+                                {product.brand ? `${product.brand} · ` : ""}
                                 ID: {String(product._id).slice(-6)}
                               </p>
 
@@ -1511,9 +1522,7 @@ export default function AdminProductsPage() {
                                   : "border-emerald-200 bg-emerald-50 text-emerald-700"
                               }`}
                             >
-                              {product.isActive === false
-                                ? "Hidden"
-                                : "Active"}
+                              {product.isActive === false ? "Hidden" : "Active"}
                             </span>
 
                             {product.isFeatured && (
@@ -1577,8 +1586,7 @@ export default function AdminProductsPage() {
                   product.source === "AMAZON";
 
                 const isNewDrop =
-                  String(product.newCategory || "").toLowerCase() ===
-                  "new";
+                  String(product.newCategory || "").toLowerCase() === "new";
 
                 const imageCount = getProductImages(product).length;
 
@@ -1649,9 +1657,7 @@ export default function AdminProductsPage() {
                                 : "border-emerald-200 bg-emerald-50 text-emerald-700"
                             }`}
                           >
-                            {product.isActive === false
-                              ? "Hidden"
-                              : "Active"}
+                            {product.isActive === false ? "Hidden" : "Active"}
                           </span>
 
                           {product.isFeatured && (
@@ -1737,4 +1743,4 @@ export default function AdminProductsPage() {
       />
     </div>
   );
-}      
+}

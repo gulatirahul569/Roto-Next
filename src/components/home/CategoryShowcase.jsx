@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FiArrowUpRight } from "react-icons/fi";
 
@@ -44,7 +47,51 @@ const categories = [
   },
 ];
 
-export default function CategoryShowcase({ media = {} }) {
+export default function CategoryShowcase() {
+  const [media, setMedia] = useState({});
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadCategoryShowcaseMedia() {
+      try {
+        const response = await fetch(
+          "/api/media?prefix=home/categories/",
+          {
+            cache: "no-store",
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Unable to load Category Showcase images.",
+          );
+        }
+
+        const data = await response.json();
+
+        if (isActive) {
+          setMedia(data.media || {});
+        }
+      } catch (error) {
+        console.error(
+          "Category Showcase media loading error:",
+          error,
+        );
+
+        if (isActive) {
+          setMedia({});
+        }
+      }
+    }
+
+    loadCategoryShowcaseMedia();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   return (
     <section className="bg-gray-50 py-8">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-8">
@@ -66,15 +113,17 @@ export default function CategoryShowcase({ media = {} }) {
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
           {categories.map((category) => {
             const imageUrl =
-              media[category.imageKey] || category.fallbackImage;
+              media[category.imageKey] ||
+              category.fallbackImage;
 
             return (
               <Link
                 key={category.title}
                 href={category.route}
-                className="group relative min-h-[420px] overflow-hidden bg-zinc-900 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                className="group relative min-h-[420px] overflow-hidden  bg-zinc-900 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
               >
                 <img
+                  key={imageUrl}
                   src={imageUrl}
                   alt={`${category.title} collection`}
                   className="absolute inset-0 size-full object-cover transition duration-700 ease-out group-hover:scale-110"
@@ -125,4 +174,4 @@ export default function CategoryShowcase({ media = {} }) {
       </div>
     </section>
   );
-}
+} 
