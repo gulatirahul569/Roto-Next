@@ -1,5 +1,5 @@
 "use client";
-
+import { useAuth } from "../../../context/AuthContext";
 import { useEffect, useMemo, useState } from "react";
 import {
   FiImage,
@@ -97,11 +97,12 @@ function isAmazonUrl(value) {
 }
 
 export default function AddProductPage() {
+  const { token, user, isAuthLoaded } = useAuth();
+
   const [form, setForm] = useState(initialForm);
 
   const [selectedImages, setSelectedImages] = useState([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
 
@@ -254,7 +255,7 @@ export default function AddProductPage() {
       purchaseMode,
       externalButtonText:
         purchaseMode === "EXTERNAL_LINK" &&
-        !previous.externalButtonText
+          !previous.externalButtonText
           ? "Explore Product"
           : previous.externalButtonText,
     }));
@@ -453,10 +454,12 @@ export default function AddProductPage() {
       setIsSubmitting(true);
       setIsUploadingImages(true);
 
-      const token = localStorage.getItem("token");
-
       if (!token) {
         throw new Error("Your admin session has expired. Please log in again.");
+      }
+
+      if (user?.role !== "admin") {
+        throw new Error("Admin access is required to upload product images.");
       }
 
       const uploadedImageUrls = await uploadProductImages(
@@ -550,14 +553,38 @@ export default function AddProductPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-          "Something went wrong while creating the product.",
+        "Something went wrong while creating the product.",
       );
     } finally {
       setIsSubmitting(false);
       setIsUploadingImages(false);
     }
   }
+  if (!isAuthLoaded) {
+    return (
+      <main className="grid min-h-[60vh] place-items-center bg-zinc-50">
+        <p className="text-sm font-bold text-zinc-500">
+          Loading admin session...
+        </p>
+      </main>
+    );
+  }
 
+  if (user?.role !== "admin") {
+    return (
+      <main className="grid min-h-[60vh] place-items-center bg-zinc-50 px-6 text-center">
+        <div>
+          <h1 className="text-2xl font-black text-zinc-950">
+            Admin access required
+          </h1>
+
+          <p className="mt-2 text-sm text-zinc-500">
+            Only administrators can add products and upload product media.
+          </p>
+        </div>
+      </main>
+    );
+  }
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
