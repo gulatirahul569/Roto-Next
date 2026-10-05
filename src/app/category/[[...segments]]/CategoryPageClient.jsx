@@ -55,9 +55,12 @@ const priceOptionToQueryMap = {
   "Above ₹10000": "above-10000",
 };
 
+/* Shared page gutter: 16px on phones, 24px tablet, 32px desktop */
+const GUTTER = "px-4 sm:px-6 lg:px-8";
+
 function ProductGridSkeleton({ count = 8 }) {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
@@ -65,7 +68,7 @@ function ProductGridSkeleton({ count = 8 }) {
         >
           <div className="aspect-[4/4.7] animate-pulse bg-zinc-200" />
 
-          <div className="space-y-3 p-4">
+          <div className="space-y-3 p-3 sm:p-4">
             <div className="h-4 w-3/4 animate-pulse rounded bg-zinc-200" />
             <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-100" />
             <div className="h-9 animate-pulse rounded-full bg-zinc-100" />
@@ -78,7 +81,7 @@ function ProductGridSkeleton({ count = 8 }) {
 
 function ProductRow({ products }) {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
       {products.map((product) => (
         <ProductCard key={product._id} product={product} />
       ))}
@@ -88,51 +91,41 @@ function ProductRow({ products }) {
 
 function TrustStrip() {
   const trustItems = [
-    {
-      icon: FiShield,
-      title: "Secure payments",
-      text: "Safe and protected checkout",
-    },
-    {
-      icon: FiRefreshCw,
-      title: "Easy returns",
-      text: "Simple return support",
-    },
-    {
-      icon: FiTruck,
-      title: "Fast delivery",
-      text: "Products delivered with care",
-    },
-    {
-      icon: FiCheckCircle,
-      title: "Curated products",
-      text: "Selected for everyday life",
-    },
+    { icon: FiShield, title: "Secure payments", text: "Safe and protected checkout" },
+    { icon: FiRefreshCw, title: "Easy returns", text: "Simple return support" },
+    { icon: FiTruck, title: "Fast delivery", text: "Products delivered with care" },
+    { icon: FiCheckCircle, title: "Curated products", text: "Selected for everyday life" },
   ];
 
   return (
     <section className="border-y border-zinc-200 bg-white">
-      <div className="mx-auto grid max-w-full divide-y divide-zinc-200 px-6 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4 lg:px-8">
-        {trustItems.map((item) => {
-          const Icon = item.icon;
+      {/* 2x2 on mobile, 4 across on desktop; gap-px over a grey bg draws the dividers */}
+      <div className={`mx-auto max-w-full ${GUTTER}`}>
+        <div className="grid grid-cols-2 gap-px bg-zinc-200 lg:grid-cols-4">
+          {trustItems.map((item) => {
+            const Icon = item.icon;
 
-          return (
-            <div
-              key={item.title}
-              className="flex items-center gap-3 py-5 sm:px-5 lg:px-6"
-            >
-              <div className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-700">
-                <Icon size={18} />
+            return (
+              <div
+                key={item.title}
+                className="flex flex-col items-start gap-2 bg-white px-3 py-4 sm:flex-row sm:items-center sm:gap-3 sm:px-5 sm:py-5 lg:px-6"
+              >
+                <div className="grid size-9 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-700 sm:size-10">
+                  <Icon size={17} />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-[13px] font-black text-zinc-950 sm:text-sm">
+                    {item.title}
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-4 text-zinc-500 sm:text-xs">
+                    {item.text}
+                  </p>
+                </div>
               </div>
-
-              <div>
-                <p className="text-sm font-black text-zinc-950">{item.title}</p>
-
-                <p className="mt-0.5 text-xs text-zinc-500">{item.text}</p>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </section>
   );
@@ -140,20 +133,20 @@ function TrustStrip() {
 
 function SectionHeading({ eyebrow, title, description, href, linkText }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
       <div className="max-w-2xl">
         {eyebrow && (
-          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-700">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-amber-700 sm:text-xs">
             {eyebrow}
           </p>
         )}
 
-        <h2 className="mt-2 text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">
+        <h2 className="mt-2 text-2xl font-black tracking-tight text-zinc-950 sm:text-4xl">
           {title}
         </h2>
 
         {description && (
-          <p className="mt-3 text-sm leading-6 text-zinc-600 sm:text-base">
+          <p className="mt-2 text-sm leading-6 text-zinc-600 sm:mt-3 sm:text-base">
             {description}
           </p>
         )}
@@ -178,30 +171,31 @@ function CollectionCard({ department, subcategory }) {
   return (
     <Link
       href={`/category/${department.slug}/${subcategory.slug}`}
-      className="group relative min-h-104 overflow-hidden rounded-2xl bg-zinc-900"
+      className="group relative min-h-[240px] overflow-hidden rounded-2xl bg-zinc-900 sm:min-h-[340px] lg:min-h-[416px]"
     >
       <img
         src={image}
         alt={subcategory.title}
+        loading="lazy"
         className="absolute inset-0 size-full object-cover transition duration-700 group-hover:scale-110"
       />
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
 
-      <div className="absolute right-4 top-4 grid size-10 place-items-center rounded-full border border-white/30 bg-black/15 text-white backdrop-blur-sm transition group-hover:bg-white group-hover:text-zinc-950">
-        <FiArrowRight size={17} />
+      <div className="absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full border border-white/30 bg-black/15 text-white backdrop-blur-sm transition group-hover:bg-white group-hover:text-zinc-950 sm:right-4 sm:top-4 sm:size-10">
+        <FiArrowRight size={15} />
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/70">
+      <div className="absolute inset-x-0 bottom-0 p-3.5 text-white sm:p-5">
+        <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-white/70 sm:text-[10px] sm:tracking-[0.16em]">
           Explore collection
         </p>
 
-        <h3 className="mt-2 text-2xl font-black tracking-tight">
+        <h3 className="mt-1 text-lg font-black leading-tight tracking-tight sm:mt-2 sm:text-2xl">
           {subcategory.title}
         </h3>
 
-        <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/80">
+        <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-white/80 sm:mt-2 sm:text-sm sm:leading-6">
           {subcategory.description}
         </p>
       </div>
@@ -217,8 +211,15 @@ function FilterContent({
   onPriceChange,
   filterTitle = "Subcategory",
 }) {
+  const chip = (active) =>
+    `rounded-full border px-3.5 py-2 text-xs font-bold transition sm:px-4 sm:py-2.5 lg:w-full lg:rounded-xl lg:text-left ${
+      active
+        ? "border-zinc-950 bg-zinc-950 text-white"
+        : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50"
+    }`;
+
   return (
-    <div className="space-y-7">
+    <div className="space-y-6 lg:space-y-7">
       <div>
         <h3 className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-zinc-500">
           {filterTitle}
@@ -230,11 +231,7 @@ function FilterContent({
               key={filter}
               type="button"
               onClick={() => setSelectedFilter(filter)}
-              className={`rounded-full border px-4 py-2.5 text-xs font-bold transition lg:w-full lg:rounded-xl lg:text-left ${
-                selectedFilter === filter
-                  ? "border-zinc-950 bg-zinc-950 text-white"
-                  : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50"
-              }`}
+              className={chip(selectedFilter === filter)}
             >
               {filter}
             </button>
@@ -253,11 +250,7 @@ function FilterContent({
               key={price}
               type="button"
               onClick={() => onPriceChange(price)}
-              className={`rounded-full border px-4 py-2.5 text-xs font-bold transition lg:w-full lg:rounded-xl lg:text-left ${
-                selectedPrice === price
-                  ? "border-zinc-950 bg-zinc-950 text-white"
-                  : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50"
-              }`}
+              className={chip(selectedPrice === price)}
             >
               {price}
             </button>
@@ -271,13 +264,13 @@ function FilterContent({
 function CategoryMediaSkeleton() {
   return (
     <main className="min-h-screen bg-zinc-50">
-      <section className="relative min-h-[590px] animate-pulse overflow-hidden bg-zinc-900 sm:min-h-[450px] lg:min-h-[560px]">
+      <section className="relative min-h-[480px] animate-pulse overflow-hidden bg-zinc-900 sm:min-h-[450px] lg:min-h-[560px]">
         <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-800 to-zinc-700" />
 
-        <div className="relative mx-auto flex min-h-[590px] max-w-full items-end px-6 py-14 sm:min-h-[450px] lg:min-h-[560px] lg:px-8">
+        <div className={`relative mx-auto flex min-h-[480px] max-w-full items-end py-10 sm:min-h-[450px] sm:py-14 lg:min-h-[560px] ${GUTTER}`}>
           <div className="w-full max-w-2xl">
             <div className="h-3 w-28 rounded bg-white/20" />
-            <div className="mt-6 h-16 max-w-md rounded bg-white/20 sm:h-20" />
+            <div className="mt-6 h-14 max-w-md rounded bg-white/20 sm:h-20" />
             <div className="mt-5 h-5 max-w-xl rounded bg-white/15" />
             <div className="mt-3 h-5 max-w-lg rounded bg-white/15" />
             <div className="mt-8 h-12 w-44 rounded-full bg-white/20" />
@@ -285,12 +278,12 @@ function CategoryMediaSkeleton() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-full px-6 py-16 lg:px-8">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <section className={`mx-auto max-w-full py-10 sm:py-16 ${GUTTER}`}>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, index) => (
             <div
               key={index}
-              className="h-72 animate-pulse rounded-2xl bg-zinc-200"
+              className="h-56 animate-pulse rounded-2xl bg-zinc-200 sm:h-72"
             />
           ))}
         </div>
@@ -446,42 +439,24 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
       document.body.style.overflow = previousOverflow;
     };
   }, [isMobileFiltersOpen]);
-  const productTypeFilters = useMemo(() => {
-    /*
-    /category/all
 
-    Show main store departments instead of subcategories.
-  */
+  const productTypeFilters = useMemo(() => {
+    // /category/all → show main store departments
     if (department?.slug === "all") {
       return ["All", "Men", "Women", "Kids", "Home", "Accessories"];
     }
 
-    /*
-    /category/new
-
-    New Drops already loads products using category=new.
-    No department/subcategory filter is needed here.
-  */
+    // /category/new → already loads category=new, no extra filter needed
     if (department?.slug === "new") {
       return ["All"];
     }
 
-    /*
-    /category/men/t-shirts
-
-    The URL already loads only T-Shirts products.
-  */
+    // /category/men/t-shirts → URL already loads only that subcategory
     if (subcategory) {
       return ["All", subcategory.title];
     }
 
-    /*
-    /category/men
-    /category/women
-    /category/kids
-    /category/home
-    /category/accessories
-  */
+    // /category/men, /women, /kids, /home, /accessories
     return [
       "All",
       ...(department?.subcategories || []).map((item) => item.title),
@@ -518,12 +493,6 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
     let result = [...products];
 
     if (selectedFilter !== "All") {
-      /*
-    On /category/all:
-    "Men" becomes department: "MEN"
-    "Women" becomes department: "WOMEN"
-    etc.
-  */
       if (department?.slug === "all") {
         result = result.filter(
           (product) =>
@@ -531,12 +500,6 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
             selectedFilter.toUpperCase(),
         );
       } else {
-        /*
-      On department landing pages:
-      "T-Shirts" becomes subcategory: "t-shirts"
-      "Dresses" becomes subcategory: "dresses"
-      etc.
-    */
         const selectedSubcategory = department?.subcategories?.find(
           (item) => item.title === selectedFilter,
         );
@@ -550,6 +513,7 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
         }
       }
     }
+
     if (selectedBrand !== "All") {
       result = result.filter(
         (product) =>
@@ -589,6 +553,7 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
     if (selectedPrice === "Above ₹10000") {
       result = result.filter((product) => Number(product.price || 0) > 10000);
     }
+
     if (sortOption === "Price: Low to High") {
       return result.sort(
         (firstProduct, secondProduct) =>
@@ -622,17 +587,17 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
 
   if (!isValidRoute) {
     return (
-      <main className="grid min-h-[70vh] place-items-center bg-zinc-50 px-6">
+      <main className="grid min-h-[70vh] place-items-center bg-zinc-50 px-4 sm:px-6">
         <div className="max-w-md text-center">
           <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-700">
             Roto
           </p>
 
-          <h1 className="mt-4 text-4xl font-black tracking-tight text-zinc-950">
+          <h1 className="mt-4 text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">
             Collection not found.
           </h1>
 
-          <p className="mt-4 text-zinc-600">
+          <p className="mt-4 text-sm text-zinc-600 sm:text-base">
             The collection you are looking for does not exist or has moved.
           </p>
 
@@ -677,20 +642,34 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
 
   const shouldShowBrands = !isLoading && !subcategory && brands.length > 0;
 
+  const scrollToProducts = () =>
+    document.getElementById("products")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+
+  const brandChip = (active) =>
+    `shrink-0 whitespace-nowrap rounded-full border px-4 py-2.5 text-[13px] font-extrabold transition sm:px-5 sm:py-3 sm:text-sm ${
+      active
+        ? "border-zinc-950 bg-zinc-950 text-white"
+        : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-950"
+    }`;
+
   return (
-    <main className="min-h-screen bg-zinc-50">
-      <section className="relative isolate min-h-[590px] overflow-hidden sm:min-h-[450px] lg:min-h-[560px]">
+    <main className="min-h-screen overflow-x-clip bg-zinc-50">
+      {/* ---------- HERO ---------- */}
+      <section className="relative isolate min-h-[480px] overflow-hidden sm:min-h-[450px] lg:min-h-[560px]">
         <img
           src={department.banner}
           alt={pageTitle}
           className="absolute inset-0 size-full object-cover"
         />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/20 sm:bg-gradient-to-r sm:from-black/85 sm:via-black/55 sm:to-black/20" />
 
-        <div className="relative z-10 mx-auto flex min-h-[590px] max-w-full items-end px-6 py-14 sm:min-h-[450px] sm:py-16 lg:min-h-[560px] lg:px-8 lg:py-20">
-          <div className="max-w-3xl text-white">
-            <nav className="flex flex-wrap items-center gap-2 text-xs font-bold text-white/70">
+        <div className={`relative z-10 mx-auto flex min-h-[480px] max-w-full items-end py-10 sm:min-h-[450px] sm:py-16 lg:min-h-[560px] lg:py-20 ${GUTTER}`}>
+          <div className="w-full max-w-3xl text-white">
+            <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-bold text-white/70 sm:text-xs">
               <Link href="/" className="transition hover:text-white">
                 Home
               </Link>
@@ -713,7 +692,7 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
               <span className="text-white">{pageTitle}</span>
             </nav>
 
-            <p className="mt-8 text-xs font-extrabold uppercase tracking-[0.22em] text-amber-300">
+            <p className="mt-6 text-[10px] font-extrabold uppercase tracking-[0.2em] text-amber-300 sm:mt-8 sm:text-xs sm:tracking-[0.22em]">
               {subcategory
                 ? department.title
                 : department.slug === "new"
@@ -721,18 +700,18 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
                   : "Roto collection"}
             </p>
 
-            <h1 className="mt-4 text-5xl font-black uppercase leading-none tracking-[-0.05em] sm:text-6xl lg:text-8xl">
+            <h1 className="mt-3 break-words text-[clamp(2.25rem,12vw,3rem)] font-black uppercase leading-[0.95] tracking-[-0.05em] sm:mt-4 sm:text-6xl lg:text-8xl">
               {pageTitle}
             </h1>
 
-            <p className="mt-5 max-w-2xl text-sm leading-6 text-white/85 sm:text-base sm:leading-7">
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-white/85 sm:mt-5 sm:text-base sm:leading-7">
               {pageSubtitle}
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
               <a
                 href="#products"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-extrabold text-zinc-950 transition hover:bg-zinc-200"
+                className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-extrabold text-zinc-950 transition hover:bg-zinc-200"
               >
                 {heroPrimaryLabel}
                 <FiArrowRight size={17} />
@@ -740,7 +719,7 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
 
               <Link
                 href={heroSecondaryHref}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/40 bg-black/15 px-6 py-3.5 text-sm font-extrabold text-white backdrop-blur-sm transition hover:bg-white hover:text-zinc-950"
+                className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-white/40 bg-black/15 px-6 py-3 text-sm font-extrabold text-white backdrop-blur-sm transition hover:bg-white hover:text-zinc-950"
               >
                 {heroSecondaryLabel}
                 <FiArrowRight size={17} />
@@ -752,15 +731,16 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
 
       <TrustStrip />
 
+      {/* ---------- COLLECTION CARDS (2 columns on mobile) ---------- */}
       {shouldShowCollectionCards && (
-        <section className="mx-auto max-w-full px-6 py-16 lg:px-8 lg:py-20">
+        <section className={`mx-auto max-w-full py-10 sm:py-16 lg:py-20 ${GUTTER}`}>
           <SectionHeading
             eyebrow="Shop by collection"
             title={`Shop ${department.title}`}
             description={`Explore curated ${department.title.toLowerCase()} collections designed for daily life, movement, and everything ahead.`}
           />
 
-          <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-9 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {department.subcategories.map((item) => (
               <CollectionCard
                 key={item.slug}
@@ -773,8 +753,8 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
       )}
 
       {shouldShowNewProducts && (
-        <section className="border-y border-zinc-200 bg-white py-10">
-          <div className="mx-auto max-w-full px-6 lg:px-8">
+        <section className="border-y border-zinc-200 bg-white py-8 sm:py-10">
+          <div className={`mx-auto max-w-full ${GUTTER}`}>
             <SectionHeading
               eyebrow="Fresh arrivals"
               title={`New in ${department.title}`}
@@ -784,15 +764,15 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
             />
           </div>
 
-          <div className="mt-9">
+          <div className="mt-6 sm:mt-9">
             <ProductMarquee products={newProducts} />
           </div>
         </section>
       )}
 
       {shouldShowFeaturedProducts && (
-        <section className="bg-zinc-50 py-10">
-          <div className="mx-auto max-w-full px-6 lg:px-8">
+        <section className="bg-zinc-50 py-8 sm:py-10">
+          <div className={`mx-auto max-w-full ${GUTTER}`}>
             <SectionHeading
               eyebrow="Customer favourites"
               title={`Featured in ${department.title}`}
@@ -801,38 +781,31 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
               linkText={`Shop ${department.title}`}
             />
 
-            <div className="mt-9">
+            <div className="mt-6 sm:mt-9">
               <ProductRow products={featuredProducts} />
             </div>
           </div>
         </section>
       )}
 
+      {/* ---------- BRANDS (swipeable row on mobile) ---------- */}
       {shouldShowBrands && (
-        <section className="border-y border-zinc-200 bg-white py-14">
-          <div className="mx-auto max-w-full px-6 lg:px-8">
+        <section className="border-y border-zinc-200 bg-white py-8 sm:py-14">
+          <div className={`mx-auto max-w-full ${GUTTER}`}>
             <SectionHeading
               eyebrow="Discover brands"
               title={`Shop ${department.title} by brand`}
               description="Choose a brand to refine the products shown below."
             />
 
-            <div className="mt-7 flex flex-wrap gap-3">
+            <div className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:mt-7 sm:flex-wrap sm:gap-3 sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
               <button
                 type="button"
                 onClick={() => {
                   setSelectedBrand("All");
-
-                  document.getElementById("products")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
+                  scrollToProducts();
                 }}
-                className={`rounded-full border px-5 py-3 text-sm font-extrabold transition ${
-                  selectedBrand === "All"
-                    ? "border-zinc-950 bg-zinc-950 text-white"
-                    : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-950"
-                }`}
+                className={brandChip(selectedBrand === "All")}
               >
                 All brands
               </button>
@@ -843,17 +816,9 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
                   type="button"
                   onClick={() => {
                     setSelectedBrand(brand);
-
-                    document.getElementById("products")?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    });
+                    scrollToProducts();
                   }}
-                  className={`rounded-full border px-5 py-3 text-sm font-extrabold transition ${
-                    selectedBrand === brand
-                      ? "border-zinc-950 bg-zinc-950 text-white"
-                      : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-950"
-                  }`}
+                  className={brandChip(selectedBrand === brand)}
                 >
                   {brand}
                 </button>
@@ -863,15 +828,16 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
         </section>
       )}
 
+      {/* ---------- PRODUCTS ---------- */}
       <section
         id="products"
         className="scroll-mt-20 border-t border-zinc-200 bg-zinc-50"
       >
-        <div className="border-b border-zinc-200 bg-white px-6 py-4 lg:hidden">
+        <div className="border-b border-zinc-200 bg-white px-4 py-3 sm:px-6 sm:py-4 lg:hidden">
           <button
             type="button"
             onClick={() => setIsMobileFiltersOpen(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-zinc-800"
+            className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-zinc-800"
           >
             <FiFilter size={16} />
             Filter products
@@ -887,46 +853,53 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
               onClick={() => setIsMobileFiltersOpen(false)}
             />
 
-            <div className="absolute inset-x-0 bottom-0 max-h-[82vh] overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl">
-              <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-zinc-200" />
+            <div className="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col rounded-t-3xl bg-white shadow-2xl">
+              <div className="shrink-0 px-5 pt-3 sm:px-6">
+                <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-zinc-200" />
 
-              <div className="mb-6 flex items-center justify-between border-b border-zinc-200 pb-4">
-                <div>
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-700">
-                    Refine results
-                  </p>
+                <div className="flex items-center justify-between border-b border-zinc-200 pb-4">
+                  <div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-700">
+                      Refine results
+                    </p>
 
-                  <h2 className="mt-1 text-2xl font-black tracking-tight text-zinc-950">
-                    Filters
-                  </h2>
+                    <h2 className="mt-1 text-xl font-black tracking-tight text-zinc-950 sm:text-2xl">
+                      Filters
+                    </h2>
+                  </div>
+
+                  <button
+                    type="button"
+                    aria-label="Close filters"
+                    onClick={() => setIsMobileFiltersOpen(false)}
+                    className="grid size-10 place-items-center rounded-full bg-zinc-100 text-zinc-950"
+                  >
+                    <FiX size={20} />
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  aria-label="Close filters"
-                  onClick={() => setIsMobileFiltersOpen(false)}
-                  className="grid size-10 place-items-center rounded-full bg-zinc-100 text-zinc-950"
-                >
-                  <FiX size={20} />
-                </button>
               </div>
 
-              <FilterContent
-                filters={productTypeFilters}
-                selectedFilter={selectedFilter}
-                setSelectedFilter={setSelectedFilter}
-                selectedPrice={selectedPrice}
-                onPriceChange={handlePriceChange}
-                filterTitle={filterTitle}
-              />
+              {/* Only the filter list scrolls; the button below stays visible */}
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+                <FilterContent
+                  filters={productTypeFilters}
+                  selectedFilter={selectedFilter}
+                  setSelectedFilter={setSelectedFilter}
+                  selectedPrice={selectedPrice}
+                  onPriceChange={handlePriceChange}
+                  filterTitle={filterTitle}
+                />
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setIsMobileFiltersOpen(false)}
-                className="mt-8 w-full rounded-full bg-zinc-950 py-3.5 text-sm font-extrabold text-white"
-              >
-                Show {finalProducts.length} products
-              </button>
+              <div className="shrink-0 border-t border-zinc-200 bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFiltersOpen(false)}
+                  className="w-full rounded-full bg-zinc-950 py-3.5 text-sm font-extrabold text-white"
+                >
+                  Show {finalProducts.length} products
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -961,10 +934,10 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
             </div>
           </aside>
 
-          <section className="min-w-0 flex-1 px-6 py-12 lg:px-10">
-            <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-700">
+          <section className="min-w-0 flex-1 px-4 py-8 sm:px-6 sm:py-12 lg:px-10">
+            <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-5">
+              <div className="min-w-0">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-amber-700 sm:text-xs">
                   {subcategory
                     ? department.title
                     : department.slug === "new"
@@ -972,19 +945,21 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
                       : department.title}
                 </p>
 
-                <h2 className="mt-2 flex items-center gap-3 text-4xl font-black tracking-tight text-zinc-950">
-                  {subcategory && <FiLayers size={28} />}
+                <h2 className="mt-2 flex items-center gap-2 text-2xl font-black tracking-tight text-zinc-950 sm:gap-3 sm:text-4xl">
+                  {subcategory && <FiLayers className="size-6 shrink-0 sm:size-7" />}
 
-                  {subcategory
-                    ? subcategory.title
-                    : department.slug === "new"
-                      ? "All New Drops"
-                      : department.slug === "all"
-                        ? "All Products"
-                        : `All ${department.title} Products`}
+                  <span className="min-w-0 break-words">
+                    {subcategory
+                      ? subcategory.title
+                      : department.slug === "new"
+                        ? "All New Drops"
+                        : department.slug === "all"
+                          ? "All Products"
+                          : `All ${department.title} Products`}
+                  </span>
                 </h2>
 
-                <p className="mt-2 text-sm text-zinc-500">
+                <p className="mt-2 text-xs text-zinc-500 sm:text-sm">
                   {isLoading
                     ? "Loading products..."
                     : `Showing ${finalProducts.length} product${
@@ -997,13 +972,13 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
                 <button
                   type="button"
                   onClick={() => setIsSortOpen((current) => !current)}
-                  className="flex w-full items-center justify-between rounded-xl border border-zinc-300 bg-white px-4 py-3 text-left text-sm font-bold text-zinc-900 transition hover:border-zinc-500"
+                  className="flex min-h-[44px] w-full items-center justify-between rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-left text-sm font-bold text-zinc-900 transition hover:border-zinc-500"
                 >
-                  <span>{sortOption}</span>
+                  <span className="truncate">Sort: {sortOption}</span>
 
                   <FiChevronDown
                     size={17}
-                    className={`transition ${isSortOpen ? "rotate-180" : ""}`}
+                    className={`shrink-0 transition ${isSortOpen ? "rotate-180" : ""}`}
                   />
                 </button>
 
@@ -1032,7 +1007,7 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
             </div>
 
             {error ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700 sm:p-6">
                 <p className="font-bold">Unable to load products.</p>
 
                 <p className="mt-1 text-sm">{error}</p>
@@ -1040,9 +1015,9 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
             ) : isLoading ? (
               <ProductGridSkeleton />
             ) : finalProducts.length === 0 ? (
-              <div className="grid min-h-80 place-items-center rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-center">
+              <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-zinc-300 bg-white p-6 text-center sm:min-h-80 sm:p-8">
                 <div>
-                  <h3 className="text-xl font-black tracking-tight text-zinc-950">
+                  <h3 className="text-lg font-black tracking-tight text-zinc-950 sm:text-xl">
                     No products found.
                   </h3>
 

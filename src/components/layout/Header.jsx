@@ -744,13 +744,7 @@ export default function Header() {
                 );
               })}
 
-              <Link
-                href="/my-orders"
-                onClick={closeAllMenus}
-                className="border-b border-zinc-100 py-4 text-sm font-extrabold uppercase tracking-[0.06em] text-zinc-950"
-              >
-                My Orders
-              </Link>
+              
             </nav>
           </div>
         )}
