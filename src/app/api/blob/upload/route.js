@@ -90,8 +90,8 @@ export async function POST(request) {
 
         console.log("PRODUCT MEDIA DESTINATION:", {
           originalDestination: destination,
-          normalizedDestination,
-          allowed: isAllowedDestination(normalizedDestination),
+          destination,
+          allowed: isAllowedDestination(destination),
         });
 
         const mediaType = String(payload.mediaType || "")
@@ -170,7 +170,7 @@ export async function POST(request) {
           console.log("BLOB DESTINATION VALIDATION:", {
             pathname,
             rawDestination: payload.destination,
-            normalizedDestination: destination,
+            destination: destination,
             allowedFolders,
             isAllowed: isAllowedDestination(destination),
           });
