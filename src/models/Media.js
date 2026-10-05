@@ -19,7 +19,15 @@ const MediaSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["banner", "subcategory", "product", "logo", "promo", "other"],
+      enum: [
+        "banner",
+        "subcategory",
+        "category-showcase",
+        "product",
+        "logo",
+        "promo",
+        "other",
+      ],
       default: "other",
       trim: true,
       lowercase: true,
