@@ -88,6 +88,12 @@ export async function POST(request) {
           .replace(/\s+/g, "-")
           .toLowerCase();
 
+        console.log("PRODUCT MEDIA DESTINATION:", {
+          originalDestination: destination,
+          normalizedDestination,
+          allowed: isAllowedDestination(normalizedDestination),
+        });
+
         const mediaType = String(payload.mediaType || "")
           .trim()
           .toLowerCase();
@@ -161,9 +167,17 @@ export async function POST(request) {
             throw new Error("Upload completed without a media destination.");
           }
 
+          console.log("BLOB DESTINATION VALIDATION:", {
+            pathname,
+            rawDestination: payload.destination,
+            normalizedDestination: destination,
+            allowedFolders,
+            isAllowed: isAllowedDestination(destination),
+          });
+
           if (!isAllowedDestination(destination)) {
             throw new Error(
-              "Upload completed with an invalid media destination.",
+              `Invalid upload destination: "${destination}". Choose a supported media location.`,
             );
           }
 
