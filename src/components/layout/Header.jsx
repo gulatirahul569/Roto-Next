@@ -27,36 +27,12 @@ const LOGO_DEFAULT = "/images/roto_logo_transparent.png";
 const LOGO_WHITE = "/images/Roto-transparent-white-logo.png";
 
 const navLinks = [
-  {
-    name: "Men",
-    href: "/category/men",
-    department: "men",
-  },
-  {
-    name: "Women",
-    href: "/category/women",
-    department: "women",
-  },
-  {
-    name: "Kids",
-    href: "/category/kids",
-    department: "kids",
-  },
-  {
-    name: "Home",
-    href: "/category/home",
-    department: "home",
-  },
-  {
-    name: "Accessories",
-    href: "/category/accessories",
-    department: "accessories",
-  },
-  {
-    name: "All Products",
-    href: "/category/all",
-    department: "all",
-  },
+  { name: "Men", href: "/category/men", department: "men" },
+  { name: "Women", href: "/category/women", department: "women" },
+  { name: "Kids", href: "/category/kids", department: "kids" },
+  { name: "Home", href: "/category/home", department: "home" },
+  { name: "Accessories", href: "/category/accessories", department: "accessories" },
+  { name: "All Products", href: "/category/all", department: "all" },
 ];
 
 function formatPrice(price) {
@@ -110,8 +86,8 @@ export default function Header() {
   const isTransparent = hasHero && !isScrolled && !isMobileMenuOpen;
 
   const defaultLogoUrl = logoMedia["logos/roto-logo"] || LOGO_DEFAULT;
-
   const whiteLogoUrl = logoMedia["logos/roto-logo-white"] || LOGO_WHITE;
+
   const closeAllMenus = () => {
     setIsMobileMenuOpen(false);
     setIsAccountMenuOpen(false);
@@ -183,9 +159,13 @@ export default function Header() {
     }
 
     document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick, {
+      passive: true,
+    });
 
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
     };
   }, []);
 
@@ -281,8 +261,8 @@ export default function Header() {
           }`}
         />
 
-        <div className="mx-auto flex h-[72px] max-w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="mx-auto flex h-[72px] max-w-full items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button
               type="button"
               aria-label={
@@ -306,7 +286,7 @@ export default function Header() {
               <img
                 src={defaultLogoUrl}
                 alt="ROTO"
-                className={`h-16 object-contain transition-opacity duration-300 md:h-20 ${
+                className={`h-14 object-contain transition-opacity duration-300 sm:h-16 md:h-20 ${
                   isTransparent ? "opacity-0" : "opacity-100"
                 }`}
               />
@@ -455,7 +435,7 @@ export default function Header() {
             })}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-0.5 sm:gap-2">
             <Link
               href="/wishlist"
               aria-label="Open wishlist"
@@ -483,19 +463,21 @@ export default function Header() {
                 <FiSearch size={19} />
               </button>
 
+              {/* Mobile: pinned to the screen edges below the header.
+                  sm and up: dropdown anchored under the search icon. */}
               {isSearchOpen && (
-                <div className="absolute right-0 top-full mt-3 w-[min(360px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
+                <div className="fixed inset-x-3 top-[76px] z-50 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-3 sm:w-[360px]">
                   <div className="border-b border-zinc-200 p-3">
                     <input
                       autoFocus
                       value={searchTerm}
                       onChange={(event) => setSearchTerm(event.target.value)}
                       placeholder="Search products..."
-                      className="w-full rounded-xl bg-zinc-100 px-4 py-3 text-sm text-zinc-950 outline-none placeholder:text-zinc-400 focus:bg-zinc-50 focus:ring-2 focus:ring-zinc-950"
+                      className="w-full rounded-xl bg-zinc-100 px-4 py-3 text-base text-zinc-950 outline-none placeholder:text-zinc-400 focus:bg-zinc-50 focus:ring-2 focus:ring-zinc-950 sm:text-sm"
                     />
                   </div>
 
-                  <div className="max-h-80 overflow-y-auto">
+                  <div className="max-h-[min(20rem,55dvh)] overflow-y-auto overscroll-contain">
                     {!searchTerm.trim() && (
                       <p className="p-5 text-center text-sm text-zinc-500">
                         Search Men, Women, Kids, Home, accessories, brands, or
@@ -586,7 +568,7 @@ export default function Header() {
               </button>
 
               {isAccountMenuOpen && (
-                <div className="absolute right-0 top-full mt-3 w-64 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
+                <div className="absolute right-0 top-full mt-3 w-64 max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
                   {isAuthLoaded && user ? (
                     <>
                       <div className="border-b border-zinc-200 bg-zinc-50 px-5 py-4">
@@ -663,7 +645,7 @@ export default function Header() {
         </div>
 
         {isMobileMenuOpen && (
-          <div className="max-h-[calc(100vh-72px)] overflow-y-auto border-t border-zinc-200 bg-white px-4 py-5 lg:hidden">
+          <div className="max-h-[calc(100dvh-72px)] overflow-y-auto overscroll-contain border-t border-zinc-200 bg-white px-4 py-5 lg:hidden">
             <button
               type="button"
               onClick={detectLocation}
@@ -743,8 +725,6 @@ export default function Header() {
                   </div>
                 );
               })}
-
-              
             </nav>
           </div>
         )}
