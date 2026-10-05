@@ -204,6 +204,25 @@ const ProductSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    sizes: {
+  type: [
+    {
+      label: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      stock: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+    },
+  ],
+
+  default: [],
+},
 
     isActive: {
       type: Boolean,

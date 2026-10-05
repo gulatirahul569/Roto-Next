@@ -155,6 +155,12 @@ function EditProductModal({
 
   const galleryImages = getProductImages(product);
 
+  const hasSizes = Array.isArray(product.sizes) && product.sizes.length > 0;
+
+  const totalSizeStock = hasSizes
+    ? product.sizes.reduce((total, size) => total + Number(size.stock || 0), 0)
+    : 0;
+
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-4 sm:items-center">
       <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
@@ -667,68 +673,181 @@ function EditProductModal({
           )}
 
           {!isExternalProduct && (
-            <div className="grid gap-5 sm:grid-cols-3">
-              <label className="block">
-                <span className="mb-2 block text-sm font-bold text-zinc-700">
-                  Selling price
-                </span>
+            <>
+              <div className="grid gap-5 sm:grid-cols-3">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-zinc-700">
+                    Selling price
+                  </span>
 
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  name="price"
-                  value={product.price ?? ""}
-                  onChange={onChange}
-                  placeholder="899"
-                  required
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
-                />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    name="price"
+                    value={product.price ?? ""}
+                    onChange={onChange}
+                    placeholder="899"
+                    required
+                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
+                  />
 
-                <span className="mt-1 block text-xs text-zinc-500">
-                  Final customer price.
-                </span>
-              </label>
+                  <span className="mt-1 block text-xs text-zinc-500">
+                    Final customer price.
+                  </span>
+                </label>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-bold text-zinc-700">
-                  Compare-at price
-                </span>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-zinc-700">
+                    Compare-at price
+                  </span>
 
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  name="compareAtPrice"
-                  value={product.compareAtPrice ?? ""}
-                  onChange={onChange}
-                  placeholder="1299"
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
-                />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    name="compareAtPrice"
+                    value={product.compareAtPrice ?? ""}
+                    onChange={onChange}
+                    placeholder="1299"
+                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
+                  />
 
-                <span className="mt-1 block text-xs text-zinc-500">
-                  Original price shown crossed out.
-                </span>
-              </label>
+                  <span className="mt-1 block text-xs text-zinc-500">
+                    Original price shown crossed out.
+                  </span>
+                </label>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-bold text-zinc-700">
-                  Stock quantity
-                </span>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-zinc-700">
+                    Stock quantity
+                  </span>
 
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  name="stock"
-                  value={product.stock ?? ""}
-                  onChange={onChange}
-                  placeholder="10"
-                  required
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white"
-                />
-              </label>
-            </div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    name="stock"
+                    value={hasSizes ? totalSizeStock : (product.stock ?? "")}
+                    onChange={onChange}
+                    readOnly={hasSizes}
+                    placeholder="10"
+                    required
+                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:bg-white read-only:cursor-not-allowed read-only:text-zinc-500"
+                  />
+
+                  {hasSizes && (
+                    <span className="mt-1 block text-xs text-zinc-500">
+                      Calculated from the size stock below.
+                    </span>
+                  )}
+                </label>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-black text-zinc-950">
+                      Sizes and stock
+                    </h3>
+
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">
+                      Add sizes only for products such as clothing, footwear,
+                      jeans, or other products with selectable sizing.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange({
+                        target: {
+                          name: "addSize",
+                          value: "",
+                        },
+                      });
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg bg-zinc-950 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-zinc-800"
+                  >
+                    <FiPlus size={15} />
+                    Add size
+                  </button>
+                </div>
+
+                {!product.sizes?.length ? (
+                  <p className="mt-4 rounded-xl border border-dashed border-zinc-300 bg-white px-4 py-3 text-xs font-semibold text-zinc-500">
+                    No size options added. This product will behave like a
+                    one-size product.
+                  </p>
+                ) : (
+                  <div className="mt-5 space-y-3">
+                    {product.sizes.map((size, index) => (
+                      <div
+                        key={`size-${index}`}
+                        className="grid gap-3 rounded-xl border border-zinc-200 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_160px_auto]"
+                      >
+                        <input
+                          type="text"
+                          value={size.label || ""}
+                          placeholder="Example: M or UK 8"
+                          onChange={(event) =>
+                            onChange({
+                              target: {
+                                name: "sizeLabel",
+                                value: event.target.value,
+                                dataset: {
+                                  index: String(index),
+                                },
+                              },
+                            })
+                          }
+                          className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-950"
+                        />
+
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={size.stock ?? 0}
+                          placeholder="Stock"
+                          onChange={(event) =>
+                            onChange({
+                              target: {
+                                name: "sizeStock",
+                                value: event.target.value,
+                                dataset: {
+                                  index: String(index),
+                                },
+                              },
+                            })
+                          }
+                          className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-950"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onChange({
+                              target: {
+                                name: "removeSize",
+                                value: "",
+                                dataset: {
+                                  index: String(index),
+                                },
+                              },
+                            })
+                          }
+                          className="grid size-10 place-items-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100"
+                          aria-label={`Remove size ${size.label}`}
+                        >
+                          <FiX size={17} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
@@ -1056,6 +1175,52 @@ export default function AdminProductsPage() {
         };
       }
 
+      if (name === "addSize") {
+        return {
+          ...currentProduct,
+          sizes: [
+            ...(Array.isArray(currentProduct.sizes)
+              ? currentProduct.sizes
+              : []),
+            { label: "", stock: 0 },
+          ],
+        };
+      }
+
+      if (name === "sizeLabel") {
+        const index = Number(event.target.dataset.index);
+        const sizes = [
+          ...(Array.isArray(currentProduct.sizes) ? currentProduct.sizes : []),
+        ];
+
+        sizes[index] = { ...sizes[index], label: value };
+
+        return { ...currentProduct, sizes };
+      }
+
+      if (name === "sizeStock") {
+        const index = Number(event.target.dataset.index);
+        const sizes = [
+          ...(Array.isArray(currentProduct.sizes) ? currentProduct.sizes : []),
+        ];
+
+        sizes[index] = {
+          ...sizes[index],
+          stock: Math.max(0, Number(value || 0)),
+        };
+
+        return { ...currentProduct, sizes };
+      }
+
+      if (name === "removeSize") {
+        const index = Number(event.target.dataset.index);
+        const sizes = (
+          Array.isArray(currentProduct.sizes) ? currentProduct.sizes : []
+        ).filter((_, itemIndex) => itemIndex !== index);
+
+        return { ...currentProduct, sizes };
+      }
+
       if (
         name === "vendorName" ||
         name === "vendorSku" ||
@@ -1244,16 +1409,49 @@ export default function AdminProductsPage() {
         );
       }
 
+      const sizes = Array.from(
+        new Map(
+          (editingProduct.sizes || [])
+            .map((size) => ({
+              label: String(size.label || "").trim(),
+              stock: Math.max(0, Number(size.stock || 0)),
+            }))
+            .filter((size) => size.label)
+            .map((size) => [size.label.toLowerCase(), size]),
+        ).values(),
+      );
+
+      const filledSizeCount = (editingProduct.sizes || []).filter((size) =>
+        String(size.label || "").trim(),
+      ).length;
+
+      if (sizes.length !== filledSizeCount) {
+        throw new Error(
+          "Each size can be added only once. Remove duplicate sizes before saving.",
+        );
+      }
+
+      const totalSizeStock = sizes.reduce(
+        (total, size) => total + size.stock,
+        0,
+      );
+
       const updatedProduct = {
         ...editingProduct,
 
         image: galleryImages[0],
         images: galleryImages,
 
+        sizes: isExternalProduct ? [] : sizes,
+
         price: sellingPrice,
         compareAtPrice,
 
-        stock: isExternalProduct ? 0 : Number(editingProduct.stock || 0),
+        stock: isExternalProduct
+          ? 0
+          : sizes.length > 0
+            ? totalSizeStock
+            : Number(editingProduct.stock || 0),
 
         purchaseMode: isAmazonProduct
           ? "EXTERNAL_LINK"

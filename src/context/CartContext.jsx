@@ -19,6 +19,16 @@ function getStoredCart() {
   }
 }
 
+/*
+  A cart line is identified by product id + selected size.
+
+  T-Shirt / M and T-Shirt / L are separate lines.
+  Products without sizes use an empty string, so they behave as before.
+*/
+function isSameLine(item, id, size = "") {
+  return item._id === id && (item.selectedSize || "") === (size || "");
+}
+
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [isCartLoaded, setIsCartLoaded] = useState(false);
@@ -37,38 +47,40 @@ export function CartProvider({ children }) {
   }, [cartItems, isCartLoaded]);
 
   const addToCart = (product) => {
+    const size = product.selectedSize || "";
+
     setCartItems((currentItems) => {
-      const existingItem = currentItems.find(
-        (item) => item._id === product._id
+      const existingItem = currentItems.find((item) =>
+        isSameLine(item, product._id, size)
       );
 
       if (existingItem) {
         return currentItems.map((item) =>
-          item._id === product._id
+          isSameLine(item, product._id, size)
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
 
-      return [...currentItems, { ...product, quantity: 1 }];
+      return [...currentItems, { ...product, selectedSize: size, quantity: 1 }];
     });
   };
 
-  const increaseQty = (id) => {
+  const increaseQty = (id, size = "") => {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
-        item._id === id
+        isSameLine(item, id, size)
           ? { ...item, quantity: item.quantity + 1 }
           : item
       )
     );
   };
 
-  const decreaseQty = (id) => {
+  const decreaseQty = (id, size = "") => {
     setCartItems((currentItems) =>
       currentItems
         .map((item) =>
-          item._id === id
+          isSameLine(item, id, size)
             ? { ...item, quantity: item.quantity - 1 }
             : item
         )
@@ -76,9 +88,9 @@ export function CartProvider({ children }) {
     );
   };
 
-  const removeFromCart = (id) => {
+  const removeFromCart = (id, size = "") => {
     setCartItems((currentItems) =>
-      currentItems.filter((item) => item._id !== id)
+      currentItems.filter((item) => !isSameLine(item, id, size))
     );
   };
 

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   FiImage,
   FiLoader,
+  FiPlus,
   FiUpload,
   FiX,
 } from "react-icons/fi";
@@ -34,6 +35,7 @@ const initialForm = {
   price: "",
   compareAtPrice: "",
   stock: "",
+  sizes: [],
 
   isActive: true,
   isFeatured: false,
@@ -113,6 +115,15 @@ export default function AddProductPage() {
   const isVendor = form.source === "VENDOR";
   const isExternal = form.purchaseMode === "EXTERNAL_LINK";
 
+  const hasSizes = form.sizes.length > 0;
+
+  const totalSizeStock = useMemo(() => {
+    return form.sizes.reduce(
+      (total, size) => total + Number(size.stock || 0),
+      0,
+    );
+  }, [form.sizes]);
+
   const subcategoryOptions = useMemo(() => {
     return getSubcategoryOptions(form.department);
   }, [form.department]);
@@ -190,6 +201,37 @@ export default function AddProductPage() {
     }));
   }
 
+  function addSize() {
+    setForm((previous) => ({
+      ...previous,
+      sizes: [...previous.sizes, { label: "", stock: 0 }],
+    }));
+  }
+
+  function updateSize(index, field, value) {
+    setForm((previous) => ({
+      ...previous,
+      sizes: previous.sizes.map((size, sizeIndex) =>
+        sizeIndex === index
+          ? {
+              ...size,
+              [field]:
+                field === "stock"
+                  ? Math.max(0, Number(value || 0))
+                  : value,
+            }
+          : size,
+      ),
+    }));
+  }
+
+  function removeSize(indexToRemove) {
+    setForm((previous) => ({
+      ...previous,
+      sizes: previous.sizes.filter((_, index) => index !== indexToRemove),
+    }));
+  }
+
   function handleTitleChange(event) {
     const title = event.target.value;
 
@@ -223,6 +265,7 @@ export default function AddProductPage() {
           price: "",
           compareAtPrice: "",
           stock: "",
+          sizes: [],
         };
       }
 
@@ -450,6 +493,35 @@ export default function AddProductPage() {
       return;
     }
 
+    const cleanSizes = Array.from(
+      new Map(
+        form.sizes
+          .map((size) => ({
+            label: String(size.label || "").trim(),
+            stock: Math.max(0, Math.floor(Number(size.stock || 0))),
+          }))
+          .filter((size) => size.label)
+          .map((size) => [size.label.toLowerCase(), size]),
+      ).values(),
+    );
+
+    if (!isExternal && form.sizes.some((size) => !String(size.label || "").trim())) {
+      setError("Enter a label for every size, or remove the empty size row.");
+      return;
+    }
+
+    if (!isExternal && cleanSizes.length !== form.sizes.length) {
+      setError(
+        "Each size can be added only once. Remove duplicate sizes before saving.",
+      );
+      return;
+    }
+
+    const totalCleanSizeStock = cleanSizes.reduce(
+      (total, size) => total + size.stock,
+      0,
+    );
+
     try {
       setIsSubmitting(true);
       setIsUploadingImages(true);
@@ -500,7 +572,11 @@ export default function AddProductPage() {
 
         stock: isExternal
           ? 0
-          : Number(form.stock || 0),
+          : cleanSizes.length > 0
+            ? totalCleanSizeStock
+            : Number(form.stock || 0),
+
+        sizes: isExternal ? [] : cleanSizes,
 
         currency: "INR",
 
@@ -1145,46 +1221,127 @@ export default function AddProductPage() {
                   />
                 </div>
               ) : (
-                <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={form.price}
-                    onChange={(event) =>
-                      updateField("price", event.target.value)
-                    }
-                    placeholder="Selling price (₹)"
-                    className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none"
-                  />
+                <>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.price}
+                      onChange={(event) =>
+                        updateField("price", event.target.value)
+                      }
+                      placeholder="Selling price (₹)"
+                      className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none"
+                    />
 
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={form.compareAtPrice}
-                    onChange={(event) =>
-                      updateField(
-                        "compareAtPrice",
-                        event.target.value,
-                      )
-                    }
-                    placeholder="Compare-at price (₹)"
-                    className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none"
-                  />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.compareAtPrice}
+                      onChange={(event) =>
+                        updateField(
+                          "compareAtPrice",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="Compare-at price (₹)"
+                      className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none"
+                    />
 
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={form.stock}
-                    onChange={(event) =>
-                      updateField("stock", event.target.value)
-                    }
-                    placeholder="Available stock"
-                    className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none"
-                  />
-                </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={hasSizes ? totalSizeStock : form.stock}
+                      onChange={(event) =>
+                        updateField("stock", event.target.value)
+                      }
+                      readOnly={hasSizes}
+                      placeholder="Available stock"
+                      className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none read-only:cursor-not-allowed read-only:bg-zinc-100 read-only:text-zinc-500"
+                    />
+                  </div>
+
+                  {hasSizes && (
+                    <p className="mt-2 text-xs text-zinc-500">
+                      Available stock is calculated from the size stock below.
+                    </p>
+                  )}
+
+                  <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-black text-zinc-950">
+                          Sizes and stock
+                        </h3>
+
+                        <p className="mt-1 text-xs leading-5 text-zinc-500">
+                          Add sizes only for products such as clothing,
+                          footwear, jeans, or other products with selectable
+                          sizing.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={addSize}
+                        className="inline-flex items-center gap-2 rounded-lg bg-zinc-950 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-zinc-800"
+                      >
+                        <FiPlus size={15} />
+                        Add size
+                      </button>
+                    </div>
+
+                    {!hasSizes ? (
+                      <p className="mt-4 rounded-xl border border-dashed border-zinc-300 bg-white px-4 py-3 text-xs font-semibold text-zinc-500">
+                        No size options added. This product will behave like a
+                        one-size product.
+                      </p>
+                    ) : (
+                      <div className="mt-5 space-y-3">
+                        {form.sizes.map((size, index) => (
+                          <div
+                            key={`size-${index}`}
+                            className="grid gap-3 rounded-xl border border-zinc-200 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_160px_auto]"
+                          >
+                            <input
+                              type="text"
+                              value={size.label}
+                              placeholder="Example: M or UK 8"
+                              onChange={(event) =>
+                                updateSize(index, "label", event.target.value)
+                              }
+                              className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-950"
+                            />
+
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={size.stock}
+                              placeholder="Stock"
+                              onChange={(event) =>
+                                updateSize(index, "stock", event.target.value)
+                              }
+                              className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm outline-none transition focus:border-zinc-950"
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => removeSize(index)}
+                              className="grid size-10 place-items-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100"
+                              aria-label={`Remove size ${size.label}`}
+                            >
+                              <FiX size={17} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </section>
           )}

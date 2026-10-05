@@ -141,6 +141,20 @@ export default function CheckoutPage() {
       return false;
     }
 
+    const itemsMissingSize = cartItems.filter(
+      (item) =>
+        Array.isArray(item.sizes) && item.sizes.length > 0 && !item.selectedSize
+    );
+
+    if (itemsMissingSize.length > 0) {
+      setErrorMessage(
+        `Please remove and re-add these products with a size selected: ${itemsMissingSize
+          .map((item) => item.name)
+          .join(", ")}`
+      );
+      return false;
+    }
+
     const requiredFields = [
       "fullName",
       "phone",
@@ -662,7 +676,10 @@ export default function CheckoutPage() {
 
               <div className="max-h-80 divide-y divide-zinc-100 overflow-y-auto">
                 {cartItems.map((item) => (
-                  <div key={item._id} className="flex gap-4 p-5">
+                  <div
+                    key={`${item._id}-${item.selectedSize || ""}`}
+                    className="flex gap-4 p-5"
+                  >
                     <div className="size-16 shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
                       <img
                         src={item.image}
@@ -675,6 +692,12 @@ export default function CheckoutPage() {
                       <h3 className="truncate text-sm font-bold text-zinc-950">
                         {item.name}
                       </h3>
+
+                      {item.selectedSize && (
+                        <p className="mt-1 text-xs font-semibold text-zinc-600">
+                          Size: {item.selectedSize}
+                        </p>
+                      )}
 
                       <p className="mt-1 text-xs font-medium text-zinc-500">
                         Quantity: {item.quantity}

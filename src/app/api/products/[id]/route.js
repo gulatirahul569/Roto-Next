@@ -367,13 +367,30 @@ export async function PUT(request, { params }) {
 
     product.compareAtPrice = compareAtPrice;
 
+    const sizes = Array.isArray(body.sizes)
+      ? Array.from(
+          new Map(
+            body.sizes
+              .map((size) => ({
+                label: stringValue(size?.label),
+                stock: Math.max(0, Math.floor(numberOrDefault(size?.stock, 0))),
+              }))
+              .filter((size) => size.label)
+              .map((size) => [size.label.toLowerCase(), size]),
+          ).values(),
+        )
+      : [];
+
+    product.sizes = isExternalProduct ? [] : sizes;
+
     product.stock = isExternalProduct
       ? 0
-      : Math.max(
-          0,
-          Math.floor(numberOrDefault(body.stock, product.stock || 0)),
-        );
-
+      : sizes.length > 0
+        ? sizes.reduce((total, size) => total + size.stock, 0)
+        : Math.max(
+            0,
+            Math.floor(numberOrDefault(body.stock, product.stock || 0)),
+          );
     product.externalUrl = isExternalProduct ? externalUrl : "";
 
     product.externalButtonText =

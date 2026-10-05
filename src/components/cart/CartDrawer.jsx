@@ -13,6 +13,17 @@ function formatPrice(price) {
   }).format(Number(price || 0));
 }
 
+// Stock available for the size chosen in a cart line (null = no size limit).
+function getSizeStockLimit(item) {
+  if (!item.selectedSize || !Array.isArray(item.sizes)) {
+    return null;
+  }
+
+  const sizeItem = item.sizes.find((size) => size.label === item.selectedSize);
+
+  return sizeItem ? Number(sizeItem.stock || 0) : null;
+}
+
 export default function CartDrawer({ isOpen, onClose }) {
   const router = useRouter();
 
@@ -135,76 +146,97 @@ export default function CartDrawer({ isOpen, onClose }) {
             </div>
           ) : (
             <div className="flex flex-col px-6 pb-5 pt-3">
-              {cartItems.map((item) => (
-                <article
-                  key={item._id}
-                  className="grid grid-cols-[92px_1fr] gap-4 border-b border-zinc-200 py-5"
-                >
-                  {/* Image */}
-                  <div className="aspect-[1/1.15] overflow-hidden rounded-xl bg-zinc-100">
-                    <img
-                      src={item.image || "/images/product-placeholder.png"}
-                      alt={item.name || "Cart product"}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
+              {cartItems.map((item) => {
+                const sizeStockLimit = getSizeStockLimit(item);
 
-                  {/* Details */}
-                  <div className="flex min-w-0 flex-col justify-between gap-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-zinc-500">
-                          {item.category || "Roto collection"}
-                        </p>
+                const isAtSizeLimit =
+                  sizeStockLimit !== null &&
+                  Number(item.quantity) >= sizeStockLimit;
 
-                        <h3 className="truncate text-sm font-semibold text-zinc-950">
-                          {item.name}
-                        </h3>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => removeFromCart(item._id)}
-                        aria-label={`Remove ${item.name} from cart`}
-                        className="grid size-8 place-items-center rounded-full text-zinc-400 transition hover:bg-red-50 hover:text-red-600"
-                      >
-                        <FiTrash2 size={16} />
-                      </button>
+                return (
+                  <article
+                    key={`${item._id}-${item.selectedSize || ""}`}
+                    className="grid grid-cols-[92px_1fr] gap-4 border-b border-zinc-200 py-5"
+                  >
+                    {/* Image */}
+                    <div className="aspect-[1/1.15] overflow-hidden rounded-xl bg-zinc-100">
+                      <img
+                        src={item.image || "/images/product-placeholder.png"}
+                        alt={item.name || "Cart product"}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      {/* Quantity */}
-                      <div className="inline-grid grid-cols-[30px_34px_30px] items-center overflow-hidden rounded-full border border-zinc-300">
-                        <button
-                          type="button"
-                          onClick={() => decreaseQty(item._id)}
-                          aria-label={`Decrease quantity of ${item.name}`}
-                          className="grid size-[30px] place-items-center bg-transparent text-zinc-900 transition hover:bg-zinc-100"
-                        >
-                          <FiMinus size={14} />
-                        </button>
+                    {/* Details */}
+                    <div className="flex min-w-0 flex-col justify-between gap-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-zinc-500">
+                            {item.category || "Roto collection"}
+                          </p>
 
-                        <span className="text-center text-xs font-extrabold text-zinc-950">
-                          {item.quantity}
-                        </span>
+                          <h3 className="truncate text-sm font-semibold text-zinc-950">
+                            {item.name}
+                          </h3>
+
+                          {item.selectedSize && (
+                            <p className="mt-1 text-xs font-semibold text-zinc-600">
+                              Size: {item.selectedSize}
+                            </p>
+                          )}
+                        </div>
 
                         <button
                           type="button"
-                          onClick={() => increaseQty(item._id)}
-                          aria-label={`Increase quantity of ${item.name}`}
-                          className="grid size-[30px] place-items-center bg-transparent text-zinc-900 transition hover:bg-zinc-100"
+                          onClick={() =>
+                            removeFromCart(item._id, item.selectedSize)
+                          }
+                          aria-label={`Remove ${item.name} from cart`}
+                          className="grid size-8 place-items-center rounded-full text-zinc-400 transition hover:bg-red-50 hover:text-red-600"
                         >
-                          <FiPlus size={14} />
+                          <FiTrash2 size={16} />
                         </button>
                       </div>
 
-                      <strong className="text-sm font-bold text-zinc-950">
-                        {formatPrice(Number(item.price || 0) * item.quantity)}
-                      </strong>
+                      <div className="flex items-center justify-between">
+                        {/* Quantity */}
+                        <div className="inline-grid grid-cols-[30px_34px_30px] items-center overflow-hidden rounded-full border border-zinc-300">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              decreaseQty(item._id, item.selectedSize)
+                            }
+                            aria-label={`Decrease quantity of ${item.name}`}
+                            className="grid size-[30px] place-items-center bg-transparent text-zinc-900 transition hover:bg-zinc-100"
+                          >
+                            <FiMinus size={14} />
+                          </button>
+
+                          <span className="text-center text-xs font-extrabold text-zinc-950">
+                            {item.quantity}
+                          </span>
+
+                          <button
+                            type="button"
+                            disabled={isAtSizeLimit}
+                            onClick={() =>
+                              increaseQty(item._id, item.selectedSize)
+                            }
+                            aria-label={`Increase quantity of ${item.name}`}
+                            className="grid size-[30px] place-items-center bg-transparent text-zinc-900 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <FiPlus size={14} />
+                          </button>
+                        </div>
+
+                        <strong className="text-sm font-bold text-zinc-950">
+                          {formatPrice(Number(item.price || 0) * item.quantity)}
+                        </strong>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>

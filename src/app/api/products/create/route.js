@@ -206,6 +206,25 @@ export async function POST(request) {
 
     const isExternalProduct = purchaseMode === "EXTERNAL_LINK";
 
+    const sizes = Array.isArray(body.sizes)
+      ? Array.from(
+          new Map(
+            body.sizes
+              .map((size) => ({
+                label: stringValue(size?.label),
+                stock: Math.max(
+                  0,
+                  Math.floor(numberOrDefault(size?.stock, 0)),
+                ),
+              }))
+              .filter((size) => size.label)
+              .map((size) => [size.label.toLowerCase(), size]),
+          ).values(),
+        )
+      : [];
+
+    const productSizes = isExternalProduct ? [] : sizes;
+
     const productData = {
       name,
       slug,
@@ -246,9 +265,13 @@ export async function POST(request) {
           ? null
           : Math.max(0, numberOrDefault(body.compareAtPrice, 0)),
 
+      sizes: productSizes,
+
       stock: isExternalProduct
         ? 0
-        : Math.max(0, Math.floor(numberOrDefault(body.stock, 0))),
+        : productSizes.length > 0
+          ? productSizes.reduce((total, size) => total + size.stock, 0)
+          : Math.max(0, Math.floor(numberOrDefault(body.stock, 0))),
 
       externalUrl: isExternalProduct ? externalUrl : "",
 

@@ -85,6 +85,8 @@ export default function ProductDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [wishlistMessage, setWishlistMessage] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [sizeError, setSizeError] = useState("");
 
   useEffect(() => {
     async function loadProduct() {
@@ -101,6 +103,11 @@ export default function ProductDetailsPage() {
       }
     }
     if (id) loadProduct();
+  }, [id]);
+
+  useEffect(() => {
+    setSelectedSize("");
+    setSizeError("");
   }, [id]);
 
   useEffect(() => {
@@ -134,7 +141,33 @@ export default function ProductDetailsPage() {
     );
   }
 
-  const cartItem = cartItems.find((item) => item._id === product._id);
+  const productSizes = Array.isArray(product.sizes)
+    ? product.sizes.filter((size) => size?.label)
+    : [];
+
+  const hasSizes = productSizes.length > 0;
+
+  const selectedSizeItem = productSizes.find(
+    (size) => size.label === selectedSize,
+  );
+
+  const selectedSizeInStock =
+    !hasSizes || Number(selectedSizeItem?.stock || 0) > 0;
+
+  const totalStock = hasSizes
+    ? productSizes.reduce((total, size) => total + Number(size.stock || 0), 0)
+    : Number(product.stock || 0);
+
+  const cartItem = cartItems.find(
+    (item) =>
+      item._id === product._id && (item.selectedSize || "") === selectedSize,
+  );
+
+  const sizeStockLimit = hasSizes ? Number(selectedSizeItem?.stock || 0) : null;
+
+  const isAtSizeLimit =
+    hasSizes && cartItem && Number(cartItem.quantity) >= sizeStockLimit;
+
   const rating = Math.max(
     0,
     Math.min(5, Math.floor(Number(product.rating) || 0)),
@@ -143,9 +176,8 @@ export default function ProductDetailsPage() {
   const isAmazonProduct = product.source === "AMAZON";
   const isExternalProduct =
     product.purchaseMode === "EXTERNAL_LINK" || isAmazonProduct;
-  const isInStock = isExternalProduct ? true : Number(product.stock) > 0;
-  const isLowStock =
-    !isExternalProduct && isInStock && Number(product.stock) <= 5;
+  const isInStock = isExternalProduct ? true : totalStock > 0;
+  const isLowStock = !isExternalProduct && isInStock && totalStock <= 5;
   const externalButtonText =
     product.externalButtonText ||
     (isAmazonProduct ? "Explore on Amazon" : "Explore Product");
@@ -188,13 +220,57 @@ export default function ProductDetailsPage() {
     );
   };
 
+  const requireSize = (message) => {
+    setSizeError(message);
+
+    document
+      .getElementById("size-selector")
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   const handleAddToCart = () => {
-    if (isInStock) addToCart(product);
+    if (!isInStock) {
+      return;
+    }
+
+    if (hasSizes && !selectedSize) {
+      requireSize("Please select a size before adding this product.");
+      return;
+    }
+
+    if (hasSizes && !selectedSizeInStock) {
+      requireSize("This size is currently out of stock.");
+      return;
+    }
+
+    addToCart({
+      ...product,
+      selectedSize,
+    });
   };
 
   const handleBuyNow = () => {
-    if (!isInStock) return;
-    if (!cartItem) addToCart(product);
+    if (!isInStock) {
+      return;
+    }
+
+    if (hasSizes && !selectedSize) {
+      requireSize("Please select a size before buying this product.");
+      return;
+    }
+
+    if (hasSizes && !selectedSizeInStock) {
+      requireSize("This size is currently out of stock.");
+      return;
+    }
+
+    if (!cartItem) {
+      addToCart({
+        ...product,
+        selectedSize,
+      });
+    }
+
     router.push("/checkout");
   };
 
@@ -202,7 +278,7 @@ export default function ProductDetailsPage() {
     <p
       className={`text-lg font-medium ${isLowStock ? "text-[#B12704]" : "text-[#007600]"}`}
     >
-      {isLowStock ? `Only ${product.stock} left in stock` : "In stock"}
+      {isLowStock ? `Only ${totalStock} left in stock` : "In stock"}
     </p>
   ) : (
     <p className="text-lg font-medium text-[#B12704]">Currently unavailable</p>
@@ -321,6 +397,73 @@ export default function ProductDetailsPage() {
               </div>
             )}
 
+            {/* Size selector */}
+            {!isExternalProduct && hasSizes && (
+              <div
+                id="size-selector"
+                className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-sm font-black text-zinc-950">
+                    Select size
+                  </h2>
+
+                  <Link
+                    href="/size-guide"
+                    className="text-xs font-bold text-[#007185] hover:underline"
+                  >
+                    Size guide
+                  </Link>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {productSizes.map((size) => {
+                    const isSelected = selectedSize === size.label;
+                    const isOutOfStock = Number(size.stock || 0) <= 0;
+
+                    return (
+                      <button
+                        key={size.label}
+                        type="button"
+                        disabled={isOutOfStock}
+                        onClick={() => {
+                          setSelectedSize(size.label);
+                          setSizeError("");
+                        }}
+                        className={`min-w-12 rounded-lg border px-4 py-2.5 text-sm font-extrabold transition ${
+                          isSelected
+                            ? "border-zinc-950 bg-zinc-950 text-white"
+                            : isOutOfStock
+                              ? "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400 line-through"
+                              : "border-zinc-300 bg-white text-zinc-900 hover:border-zinc-950"
+                        }`}
+                      >
+                        {size.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedSizeItem && (
+                  <p
+                    className={`mt-3 text-xs font-bold ${
+                      selectedSizeInStock ? "text-[#007600]" : "text-[#B12704]"
+                    }`}
+                  >
+                    {selectedSizeInStock
+                      ? `${selectedSizeItem.stock} available in size ${selectedSizeItem.label}`
+                      : `Size ${selectedSizeItem.label} is out of stock`}
+                  </p>
+                )}
+
+                {sizeError && (
+                  <p className="mt-3 text-xs font-bold text-[#B12704]">
+                    {sizeError}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Trust row */}
             <div className="mt-5 grid grid-cols-3 gap-2 text-center text-xs text-zinc-700">
               <div className="flex flex-col items-center gap-1.5">
@@ -410,13 +553,23 @@ export default function ProductDetailsPage() {
 
                   <div className="mt-3">{stockLabel}</div>
 
+                  {hasSizes && (
+                    <p className="mt-2 text-sm text-zinc-700">
+                      {selectedSize
+                        ? `Size: ${selectedSize}`
+                        : "Select a size to continue"}
+                    </p>
+                  )}
+
                   {isInStock && (
                     <div className="mt-4">
                       {cartItem ? (
                         <div className="inline-flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-zinc-100">
                           <button
                             type="button"
-                            onClick={() => decreaseQty(product._id)}
+                            onClick={() =>
+                              decreaseQty(product._id, selectedSize)
+                            }
                             aria-label={`Decrease quantity of ${product.name}`}
                             className="grid h-9 w-10 place-items-center hover:bg-zinc-200"
                           >
@@ -427,9 +580,12 @@ export default function ProductDetailsPage() {
                           </span>
                           <button
                             type="button"
-                            onClick={() => increaseQty(product._id)}
+                            disabled={isAtSizeLimit}
+                            onClick={() =>
+                              increaseQty(product._id, selectedSize)
+                            }
                             aria-label={`Increase quantity of ${product.name}`}
-                            className="grid h-9 w-10 place-items-center hover:bg-zinc-200"
+                            className="grid h-9 w-10 place-items-center hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             <FiPlus size={16} />
                           </button>
@@ -549,7 +705,9 @@ export default function ProductDetailsPage() {
                 ? "Currently unavailable"
                 : cartItem
                   ? "Go to checkout"
-                  : "Add to bag"}
+                  : hasSizes && !selectedSize
+                    ? "Select size"
+                    : "Add to bag"}
             </button>
           </div>
         )}
