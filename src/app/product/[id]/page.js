@@ -6,12 +6,12 @@ import { useParams, useRouter } from "next/navigation";
 import {
   FiArrowLeft,
   FiCheck,
-  FiChevronRight,
   FiHeart,
+  FiLock,
   FiMinus,
   FiPlus,
+  FiRotateCcw,
   FiShield,
-  FiShoppingBag,
   FiStar,
   FiTruck,
 } from "react-icons/fi";
@@ -20,6 +20,7 @@ import { useCart } from "../../../context/CartContext";
 import { useWishlist } from "../../../context/WishlistContext";
 import DeliveryCheck from "../../../components/products/DeliveryCheck";
 import ProductGallery from "../../../components/products/ProductGallery";
+import SimilarProducts from "../../../components/products/SimilarProducts";
 
 function formatPrice(price) {
   return new Intl.NumberFormat("en-IN", {
@@ -29,21 +30,44 @@ function formatPrice(price) {
   }).format(Number(price || 0));
 }
 
+// Turns the description into "About this item" bullets.
+function getHighlights(description) {
+  if (!description) return [];
+  return String(description)
+    .split(/\n+|(?<=[.!?])\s+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 3)
+    .slice(0, 6);
+}
+
+function Stars({ value, size = 16 }) {
+  return (
+    <div className="flex items-center" aria-label={`${value} out of 5 stars`}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <FiStar
+          key={i}
+          size={size}
+          className={
+            i < value ? "fill-[#FFA41C] text-[#FFA41C]" : "text-zinc-300"
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
 function ProductDetailsSkeleton() {
   return (
-    <main className="min-h-screen bg-zinc-50 px-6 py-10">
-      <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl border border-zinc-200 bg-white">
-        <div className="grid animate-pulse lg:grid-cols-2">
-          <div className="min-h-[580px] bg-zinc-200" />
-
-          <div className="space-y-6 p-8 lg:p-12">
-            <div className="h-4 w-28 rounded bg-zinc-200" />
-            <div className="h-16 w-4/5 rounded bg-zinc-200" />
-            <div className="h-6 w-1/4 rounded bg-zinc-200" />
-            <div className="h-24 rounded bg-zinc-100" />
-            <div className="h-14 rounded-full bg-zinc-200" />
-          </div>
+    <main className="min-h-screen bg-white px-4 py-6">
+      <div className="mx-auto grid max-w-[1500px] animate-pulse gap-8 lg:grid-cols-12">
+        <div className="h-[520px] rounded bg-zinc-200 lg:col-span-5" />
+        <div className="space-y-4 lg:col-span-4">
+          <div className="h-8 w-4/5 rounded bg-zinc-200" />
+          <div className="h-4 w-1/3 rounded bg-zinc-200" />
+          <div className="h-10 w-1/4 rounded bg-zinc-200" />
+          <div className="h-32 rounded bg-zinc-100" />
         </div>
+        <div className="h-80 rounded-lg bg-zinc-100 lg:col-span-3" />
       </div>
     </main>
   );
@@ -52,7 +76,6 @@ function ProductDetailsSkeleton() {
 export default function ProductDetailsPage() {
   const params = useParams();
   const router = useRouter();
-
   const id = String(params?.id || "");
 
   const { cartItems, addToCart, increaseQty, decreaseQty } = useCart();
@@ -68,11 +91,8 @@ export default function ProductDetailsPage() {
       try {
         setIsLoading(true);
         setError("");
-
         const data = await fetchProductById(id);
-        const productData = data?.product || data;
-
-        setProduct(productData);
+        setProduct(data?.product || data);
       } catch (requestError) {
         console.error("Error fetching product:", requestError);
         setError("Unable to load this product right now.");
@@ -80,48 +100,31 @@ export default function ProductDetailsPage() {
         setIsLoading(false);
       }
     }
-
-    if (id) {
-      loadProduct();
-    }
+    if (id) loadProduct();
   }, [id]);
 
   useEffect(() => {
-    if (!wishlistMessage) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setWishlistMessage("");
-    }, 2200);
-
+    if (!wishlistMessage) return;
+    const timeout = setTimeout(() => setWishlistMessage(""), 2200);
     return () => clearTimeout(timeout);
   }, [wishlistMessage]);
 
-  if (isLoading) {
-    return <ProductDetailsSkeleton />;
-  }
+  if (isLoading) return <ProductDetailsSkeleton />;
 
   if (error || !product) {
     return (
-      <main className="grid min-h-[70vh] place-items-center bg-zinc-50 px-6">
+      <main className="grid min-h-[70vh] place-items-center bg-white px-6">
         <div className="max-w-md text-center">
-          <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-700">
-            Roto
-          </p>
-
-          <h1 className="mt-4 text-4xl font-black tracking-tight text-zinc-950">
-            Product not found.
+          <h1 className="text-3xl font-bold text-zinc-950">
+            Product not found
           </h1>
-
-          <p className="mt-4 text-zinc-600">
+          <p className="mt-3 text-zinc-600">
             {error ||
               "This product may no longer be available or may have been moved."}
           </p>
-
           <Link
             href="/category/all"
-            className="mt-7 inline-flex items-center gap-2 rounded-full bg-zinc-950 px-5 py-3 text-sm font-extrabold text-white"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#FFD814] px-5 py-2.5 text-sm font-medium text-zinc-950 hover:bg-[#F7CA00]"
           >
             <FiArrowLeft size={16} />
             Browse products
@@ -132,28 +135,24 @@ export default function ProductDetailsPage() {
   }
 
   const cartItem = cartItems.find((item) => item._id === product._id);
-
   const rating = Math.max(
     0,
     Math.min(5, Math.floor(Number(product.rating) || 0)),
   );
-
   const isProductInWishlist = isInWishlist(product._id);
-
-  const isExternalProduct =
-    product.purchaseMode === "EXTERNAL_LINK" || product.source === "AMAZON";
-
   const isAmazonProduct = product.source === "AMAZON";
-
+  const isExternalProduct =
+    product.purchaseMode === "EXTERNAL_LINK" || isAmazonProduct;
   const isInStock = isExternalProduct ? true : Number(product.stock) > 0;
-
+  const isLowStock = !isExternalProduct && isInStock && Number(product.stock) <= 5;
   const externalButtonText =
     product.externalButtonText ||
     (isAmazonProduct ? "Explore on Amazon" : "Explore Product");
+  const categoryHref = `/category/${product.newCategory || "all"}`;
+  const highlights = getHighlights(product.description);
 
   const handleToggleWishlist = () => {
     toggleWishlist(product);
-
     setWishlistMessage(
       isProductInWishlist
         ? "Product removed from your wishlist."
@@ -162,271 +161,318 @@ export default function ProductDetailsPage() {
   };
 
   const handleAddToCart = () => {
-    if (!isInStock) {
-      return;
-    }
-
-    addToCart(product);
+    if (isInStock) addToCart(product);
   };
 
+  const handleBuyNow = () => {
+    if (!isInStock) return;
+    if (!cartItem) addToCart(product);
+    router.push("/checkout");
+  };
+
+  const stockLabel = isInStock ? (
+    <p
+      className={`text-lg font-medium ${isLowStock ? "text-[#B12704]" : "text-[#007600]"}`}
+    >
+      {isLowStock ? `Only ${product.stock} left in stock` : "In stock"}
+    </p>
+  ) : (
+    <p className="text-lg font-medium text-[#B12704]">Currently unavailable</p>
+  );
+
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-6 sm:px-6 sm:py-10">
-      <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
-        {/* Product-page navigation */}
-        <div className="flex items-center justify-between gap-4 border-b border-zinc-200 px-5 py-4 sm:px-8">
+    <main className="min-h-screen bg-white pb-28 lg:pb-10">
+      <div className="mx-auto max-w-[1500px] px-4 sm:px-6">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 py-3 text-xs text-zinc-600">
           <button
             type="button"
             onClick={() => router.back()}
-            className="inline-flex items-center gap-2 text-sm font-bold text-zinc-600 transition hover:text-zinc-950"
+            className="inline-flex items-center gap-1 font-medium text-[#007185] hover:text-[#C7511F] hover:underline"
           >
-            <FiArrowLeft size={17} />
-            Back
+            <FiArrowLeft size={14} />
+            Back to results
           </button>
-
+          <span className="text-zinc-300">|</span>
           <Link
-            href={`/category/${product.newCategory || "all"}`}
-            className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-4 py-2 text-xs font-extrabold text-white transition hover:bg-zinc-800 sm:px-5 sm:text-sm"
+            href={categoryHref}
+            className="text-[#007185] hover:text-[#C7511F] hover:underline"
           >
-            Explore collection
-            <FiChevronRight size={16} />
+            {product.category || "Collection"}
           </Link>
-        </div>
+        </nav>
 
-        <div className="grid lg:grid-cols-2">
-          {/* Product gallery */}
-          <ProductGallery
-            product={product}
-            isInWishlist={isProductInWishlist}
-            onToggleWishlist={handleToggleWishlist}
-          />
+        <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
+          {/* Column 1: gallery */}
+          <div className="lg:col-span-5">
+            <div className="lg:sticky lg:top-4">
+              <ProductGallery
+                product={product}
+                isInWishlist={isProductInWishlist}
+                onToggleWishlist={handleToggleWishlist}
+              />
+            </div>
+          </div>
 
-          {/* Product information */}
-          <section className="flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-12">
-            <div className="flex items-center justify-between gap-4">
-              <Link
-                href={`/category/${product.newCategory || "all"}`}
-                className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-zinc-500 transition hover:text-zinc-950"
-              >
-                Home / {product.category || "Collection"}
-              </Link>
+          {/* Column 2: product information */}
+          <section className="lg:col-span-4">
+            <h1 className="text-2xl font-medium leading-snug text-zinc-950 sm:text-[26px]">
+              {product.name}
+            </h1>
+
+            <Link
+              href={categoryHref}
+              className="mt-1 inline-block text-sm text-[#007185] hover:text-[#C7511F] hover:underline"
+            >
+              Visit the {product.category || "Roto"} store
+            </Link>
+
+            <div className="mt-2 flex items-center gap-2 text-sm">
+              <span className="font-medium text-zinc-900">
+                {Number(product.rating || 0).toFixed(1)}
+              </span>
+              <Stars value={rating} />
+              {isAmazonProduct && (
+                <span className="text-[#007185]">Amazon partner product</span>
+              )}
+            </div>
+
+            <hr className="my-4 border-zinc-200" />
+
+            {/* Price block */}
+            {isExternalProduct ? (
+              <div>
+                <p className="text-2xl font-medium text-zinc-950">
+                  Available through partner
+                </p>
+                <p className="mt-1 text-sm text-zinc-600">
+                  {isAmazonProduct
+                    ? "Price and delivery are shown on Amazon."
+                    : "Price and delivery are shown on the partner site."}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="flex items-start gap-1 text-zinc-950">
+                  <span className="mt-1.5 text-sm">₹</span>
+                  <span className="text-3xl font-medium">
+                    {formatPrice(product.price).replace(/[^\d,]/g, "")}
+                  </span>
+                </p>
+                <p className="mt-1 text-sm text-zinc-600">
+                  Inclusive of all taxes
+                </p>
+              </div>
+            )}
+
+            {/* Trust row */}
+            <div className="mt-5 grid grid-cols-3 gap-2 text-center text-xs text-zinc-700">
+              <div className="flex flex-col items-center gap-1.5">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-zinc-100">
+                  <FiTruck size={18} />
+                </span>
+                Delivery by pincode
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-zinc-100">
+                  <FiShield size={18} />
+                </span>
+                Secure checkout
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-zinc-100">
+                  <FiRotateCcw size={18} />
+                </span>
+                Easy returns
+              </div>
+            </div>
+
+            <hr className="my-5 border-zinc-200" />
+
+            {/* About this item */}
+            {highlights.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold text-zinc-950">
+                  About this item
+                </h2>
+                <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-6 text-zinc-800">
+                  {highlights.map((line, index) => (
+                    <li key={index}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+
+          {/* Column 3: buy box */}
+          <aside className="lg:col-span-3">
+            <div className="rounded-lg border border-zinc-300 p-5 lg:sticky lg:top-4">
+              {isExternalProduct ? (
+                <>
+                  <p className="text-xl font-medium text-zinc-950">
+                    Available through partner
+                  </p>
+                  <p className="mt-2 text-sm text-zinc-600">
+                    You'll complete this purchase on the partner's website.
+                  </p>
+
+                  <a
+                    href={product.externalUrl}
+                    target="_blank"
+                    rel="nofollow sponsored noopener noreferrer"
+                    className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[#FFA41C] px-4 text-sm font-medium text-zinc-950 transition hover:bg-[#FA8900]"
+                  >
+                    {externalButtonText}
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                </>
+              ) : (
+                <>
+                  {!isExternalProduct && (
+                    <p className="text-2xl font-medium text-zinc-950">
+                      {formatPrice(product.price)}
+                    </p>
+                  )}
+
+                  <div className="mt-3">
+                    <DeliveryCheck product={product} />
+                  </div>
+
+                  <div className="mt-3">{stockLabel}</div>
+
+                  {isInStock && (
+                    <div className="mt-4">
+                      {cartItem ? (
+                        <div className="inline-flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-zinc-100">
+                          <button
+                            type="button"
+                            onClick={() => decreaseQty(product._id)}
+                            aria-label={`Decrease quantity of ${product.name}`}
+                            className="grid h-9 w-10 place-items-center hover:bg-zinc-200"
+                          >
+                            <FiMinus size={16} />
+                          </button>
+                          <span className="grid h-9 w-12 place-items-center bg-white text-sm font-medium">
+                            {cartItem.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => increaseQty(product._id)}
+                            aria-label={`Increase quantity of ${product.name}`}
+                            className="grid h-9 w-10 place-items-center hover:bg-zinc-200"
+                          >
+                            <FiPlus size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-zinc-700">Quantity: 1</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-4 space-y-2.5">
+                    {cartItem ? (
+                      <button
+                        type="button"
+                        onClick={() => router.push("/checkout")}
+                        className="h-10 w-full rounded-full bg-[#FFD814] text-sm font-medium text-zinc-950 transition hover:bg-[#F7CA00]"
+                      >
+                        Go to checkout
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={!isInStock}
+                        onClick={handleAddToCart}
+                        className="h-10 w-full rounded-full bg-[#FFD814] text-sm font-medium text-zinc-950 transition hover:bg-[#F7CA00] disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
+                      >
+                        {isInStock ? "Add to bag" : "Currently unavailable"}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={!isInStock}
+                      onClick={handleBuyNow}
+                      className="h-10 w-full rounded-full bg-[#FFA41C] text-sm font-medium text-zinc-950 transition hover:bg-[#FA8900] disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
+                    >
+                      Buy now
+                    </button>
+                  </div>
+
+                  <p className="mt-4 flex items-center gap-1.5 text-xs text-[#007185]">
+                    <FiLock size={13} />
+                    Secure transaction
+                  </p>
+                </>
+              )}
+
+              <hr className="my-4 border-zinc-200" />
 
               <button
                 type="button"
                 onClick={handleToggleWishlist}
-                className={`inline-flex items-center gap-2 text-xs font-bold transition ${
+                className={`flex h-9 w-full items-center justify-center gap-2 rounded-lg border text-sm transition ${
                   isProductInWishlist
-                    ? "text-red-500"
-                    : "text-zinc-500 hover:text-red-500"
+                    ? "border-red-300 bg-red-50 text-red-600"
+                    : "border-zinc-300 text-zinc-800 hover:bg-zinc-50"
                 }`}
               >
                 <FiHeart
-                  size={17}
+                  size={16}
                   fill={isProductInWishlist ? "currentColor" : "none"}
                 />
-                <span className="hidden sm:inline">
-                  {isProductInWishlist ? "Saved" : "Save"}
-                </span>
+                {isProductInWishlist ? "Saved to wishlist" : "Add to wishlist"}
               </button>
-            </div>
 
-            {/* Rating */}
-            <div className="mt-8 flex items-center gap-2">
-              <div className="flex items-center">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <FiStar
-                    key={index}
-                    size={17}
-                    className={
-                      index < rating
-                        ? "fill-amber-400 text-amber-400"
-                        : "text-zinc-300"
-                    }
-                  />
-                ))}
-              </div>
-
-              <span className="text-sm font-medium text-zinc-500">
-                {Number(product.rating || 0).toFixed(1)} rating
-              </span>
-            </div>
-
-            <h1 className="mt-5 text-4xl font-black leading-[0.95] tracking-[-0.045em] text-zinc-950 sm:text-5xl lg:text-6xl">
-              {product.name}
-            </h1>
-
-            {product.description && (
-              <p className="mt-6 max-w-xl text-sm leading-7 text-zinc-600 sm:text-base">
-                {product.description}
-              </p>
-            )}
-
-            <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
-              {isExternalProduct ? (
-                <>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
-                      Availability
-                    </p>
-
-                    <p className="mt-1 text-xl font-black tracking-tight text-zinc-950">
-                      Available through partner
-                    </p>
-                  </div>
-
-                  <div className="rounded-full bg-orange-50 px-4 py-2 text-xs font-extrabold text-orange-700">
-                    {isAmazonProduct
-                      ? "Amazon affiliate product"
-                      : "External partner product"}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
-                    {isExternalProduct ? (
-                      <>
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
-                            Availability
-                          </p>
-
-                          <p className="mt-1 text-xl font-black tracking-tight text-zinc-950">
-                            Available through partner
-                          </p>
-                        </div>
-
-                        <div className="rounded-full bg-orange-50 px-4 py-2 text-xs font-extrabold text-orange-700">
-                          {isAmazonProduct
-                            ? "Amazon affiliate product"
-                            : "External partner product"}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
-                            Price
-                          </p>
-
-                          <p className="mt-1 text-3xl font-black tracking-tight text-zinc-950">
-                            {formatPrice(product.price)}
-                          </p>
-                        </div>
-
-                        <div
-                          className={`rounded-full px-4 py-2 text-xs font-extrabold ${
-                            isInStock
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-red-50 text-red-700"
-                          }`}
-                        >
-                          {isInStock
-                            ? `In stock${product.stock ? ` · ${product.stock} left` : ""}`
-                            : "Out of stock"}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div
-                    className={`rounded-full px-4 py-2 text-xs font-extrabold ${
-                      isInStock
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-red-50 text-red-700"
-                    }`}
-                  >
-                    {isInStock
-                      ? `In stock${product.stock ? ` · ${product.stock} left` : ""}`
-                      : "Out of stock"}
-                  </div>
-                </>
-              )}
-            </div>
-            {!isExternalProduct && <DeliveryCheck product={product} />}
-
-            {/* Add to cart / quantity */}
-            {/* Purchase action */}
-            <div className="mt-8">
-              {isExternalProduct ? (
-                <a
-                  href={product.externalUrl}
-                  target="_blank"
-                  rel="nofollow sponsored noopener noreferrer"
-                  className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-full bg-orange-500 px-6 text-sm font-extrabold text-white transition hover:bg-orange-600"
+              {wishlistMessage && (
+                <div
+                  role="status"
+                  className="mt-3 flex items-center gap-2 rounded-md bg-zinc-50 px-3 py-2 text-xs font-medium text-zinc-700"
                 >
-                  <FiShoppingBag size={19} />
-                  {externalButtonText}
-                  <span aria-hidden="true">↗</span>
-                </a>
-              ) : cartItem ? (
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <div className="inline-grid w-full grid-cols-[1fr_80px_1fr] items-center overflow-hidden rounded-full border border-zinc-300 sm:w-52">
-                    <button
-                      type="button"
-                      onClick={() => decreaseQty(product._id)}
-                      aria-label={`Decrease quantity of ${product.name}`}
-                      className="flex h-14 items-center justify-center text-zinc-950 transition hover:bg-zinc-100"
-                    >
-                      <FiMinus size={18} />
-                    </button>
-
-                    <span className="text-center text-base font-black text-zinc-950">
-                      {cartItem.quantity}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => increaseQty(product._id)}
-                      aria-label={`Increase quantity of ${product.name}`}
-                      className="flex h-14 items-center justify-center text-zinc-950 transition hover:bg-zinc-100"
-                    >
-                      <FiPlus size={18} />
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => router.push("/checkout")}
-                    className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-zinc-950 px-6 text-sm font-extrabold text-white transition hover:bg-zinc-800"
-                  >
-                    <FiShoppingBag size={18} />
-                    Go to checkout
-                  </button>
+                  <FiCheck size={14} />
+                  {wishlistMessage}
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  disabled={!isInStock}
-                  onClick={handleAddToCart}
-                  className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-full bg-zinc-950 px-6 text-sm font-extrabold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
-                >
-                  <FiShoppingBag size={19} />
-                  {isInStock ? "Add to bag" : "Currently unavailable"}
-                </button>
               )}
             </div>
-
-            {/* Trust items */}
-            <div className="mt-8 grid gap-3 border-t border-zinc-200 pt-6 sm:grid-cols-2">
-              <div className="flex items-center gap-3 text-sm text-zinc-600">
-                <FiTruck size={18} className="text-zinc-950" />
-                Delivery availability by pincode
-              </div>
-
-              <div className="flex items-center gap-3 text-sm text-zinc-600">
-                <FiShield size={18} className="text-zinc-950" />
-                Secure checkout experience
-              </div>
-            </div>
-
-            {/* Wishlist feedback */}
-            {wishlistMessage && (
-              <div className="mt-6 flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-700">
-                <FiCheck size={17} />
-                {wishlistMessage}
-              </div>
-            )}
-          </section>
+          </aside>
         </div>
+
+        {/* Similar products from the same subcategory */}
+        <SimilarProducts product={product} />
+      </div>
+
+      {/* Mobile sticky purchase bar */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white p-3 lg:hidden">
+        {isExternalProduct ? (
+          <a
+            href={product.externalUrl}
+            target="_blank"
+            rel="nofollow sponsored noopener noreferrer"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#FFA41C] text-sm font-medium text-zinc-950"
+          >
+            {externalButtonText}
+            <span aria-hidden="true">↗</span>
+          </a>
+        ) : (
+          <div className="flex items-center gap-3">
+            <p className="text-lg font-medium text-zinc-950">
+              {formatPrice(product.price)}
+            </p>
+            <button
+              type="button"
+              disabled={!isInStock}
+              onClick={cartItem ? () => router.push("/checkout") : handleAddToCart}
+              className="h-11 flex-1 rounded-full bg-[#FFD814] text-sm font-medium text-zinc-950 disabled:bg-zinc-200 disabled:text-zinc-500"
+            >
+              {!isInStock
+                ? "Currently unavailable"
+                : cartItem
+                  ? "Go to checkout"
+                  : "Add to bag"}
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );

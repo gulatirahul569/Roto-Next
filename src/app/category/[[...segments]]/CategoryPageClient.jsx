@@ -112,7 +112,7 @@ function TrustStrip() {
 
   return (
     <section className="border-y border-zinc-200 bg-white">
-      <div className="mx-auto grid max-w-7xl divide-y divide-zinc-200 px-6 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4 lg:px-8">
+      <div className="mx-auto grid max-w-full divide-y divide-zinc-200 px-6 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4 lg:px-8">
         {trustItems.map((item) => {
           const Icon = item.icon;
 
@@ -274,7 +274,7 @@ function CategoryMediaSkeleton() {
       <section className="relative min-h-[590px] animate-pulse overflow-hidden bg-zinc-900 sm:min-h-[450px] lg:min-h-[560px]">
         <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-800 to-zinc-700" />
 
-        <div className="relative mx-auto flex min-h-[590px] max-w-7xl items-end px-6 py-14 sm:min-h-[450px] lg:min-h-[560px] lg:px-8">
+        <div className="relative mx-auto flex min-h-[590px] max-w-full items-end px-6 py-14 sm:min-h-[450px] lg:min-h-[560px] lg:px-8">
           <div className="w-full max-w-2xl">
             <div className="h-3 w-28 rounded bg-white/20" />
             <div className="mt-6 h-16 max-w-md rounded bg-white/20 sm:h-20" />
@@ -285,7 +285,7 @@ function CategoryMediaSkeleton() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
+      <section className="mx-auto max-w-full px-6 py-16 lg:px-8">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, index) => (
             <div
@@ -688,7 +688,7 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
 
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/20" />
 
-        <div className="relative z-10 mx-auto flex min-h-[590px] max-w-7xl items-end px-6 py-14 sm:min-h-[450px] sm:py-16 lg:min-h-[560px] lg:px-8 lg:py-20">
+        <div className="relative z-10 mx-auto flex min-h-[590px] max-w-full items-end px-6 py-14 sm:min-h-[450px] sm:py-16 lg:min-h-[560px] lg:px-8 lg:py-20">
           <div className="max-w-3xl text-white">
             <nav className="flex flex-wrap items-center gap-2 text-xs font-bold text-white/70">
               <Link href="/" className="transition hover:text-white">
@@ -753,7 +753,7 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
       <TrustStrip />
 
       {shouldShowCollectionCards && (
-        <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
+        <section className="mx-auto max-w-full px-6 py-16 lg:px-8 lg:py-20">
           <SectionHeading
             eyebrow="Shop by collection"
             title={`Shop ${department.title}`}
@@ -773,8 +773,8 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
       )}
 
       {shouldShowNewProducts && (
-        <section className="border-y border-zinc-200 bg-white py-16 lg:py-20">
-          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <section className="border-y border-zinc-200 bg-white py-10">
+          <div className="mx-auto max-w-full px-6 lg:px-8">
             <SectionHeading
               eyebrow="Fresh arrivals"
               title={`New in ${department.title}`}
@@ -791,8 +791,8 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
       )}
 
       {shouldShowFeaturedProducts && (
-        <section className="bg-zinc-50 py-16 lg:py-20">
-          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <section className="bg-zinc-50 py-10">
+          <div className="mx-auto max-w-full px-6 lg:px-8">
             <SectionHeading
               eyebrow="Customer favourites"
               title={`Featured in ${department.title}`}
@@ -810,7 +810,7 @@ export default function CategoryPageClient({ initialMediaOverrides }) {
 
       {shouldShowBrands && (
         <section className="border-y border-zinc-200 bg-white py-14">
-          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="mx-auto max-w-full px-6 lg:px-8">
             <SectionHeading
               eyebrow="Discover brands"
               title={`Shop ${department.title} by brand`}
