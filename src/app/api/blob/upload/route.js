@@ -6,7 +6,11 @@ import Media from "../../../../models/Media";
 
 export const runtime = "nodejs";
 
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
@@ -19,26 +23,38 @@ const allowedFolders = [
   "home/categories/",
 ];
 
+function normalizeDestination(value = "") {
+  return String(value)
+    .trim()
+    .replace(/^\/+/, "")
+    .replace(/\s+/g, "-")
+    .toLowerCase();
+}
+
 function getClientPayload(clientPayload) {
   if (!clientPayload) {
-    throw new Error("Not authorized");
+    throw new Error("Not authorized.");
   }
 
   try {
     const payload = JSON.parse(clientPayload);
 
     if (!payload?.token) {
-      throw new Error("Not authorized");
+      throw new Error("Not authorized.");
     }
 
     return payload;
   } catch {
-    throw new Error("Invalid upload authorization");
+    throw new Error("Invalid upload authorization.");
   }
 }
 
 function isAllowedDestination(destination) {
-  return allowedFolders.some((folder) => destination.startsWith(folder));
+  const normalizedDestination = normalizeDestination(destination);
+
+  return allowedFolders.some((folder) =>
+    normalizedDestination.startsWith(folder),
+  );
 }
 
 function getMediaType(destination) {
@@ -77,39 +93,41 @@ export async function POST(request) {
       body,
       request,
 
-      onBeforeGenerateToken: async (pathname, clientPayload) => {
+      onBeforeGenerateToken: async (
+        pathname,
+        clientPayload,
+      ) => {
         const payload = getClientPayload(clientPayload);
 
         const token = payload.token;
 
-        const destination = String(payload.destination || "")
+        const destination = normalizeDestination(
+          payload.destination,
+        );
+
+        const mediaType = String(
+          payload.mediaType || "",
+        )
           .trim()
-          .replace(/^\/+/, "")
-          .replace(/\s+/g, "-")
           .toLowerCase();
 
-        console.log("PRODUCT MEDIA DESTINATION:", {
-          originalDestination: destination,
+        console.log("BLOB UPLOAD VALIDATION:", {
+          pathname,
+          rawDestination: payload.destination,
           destination,
           allowed: isAllowedDestination(destination),
         });
-
-        const mediaType = String(payload.mediaType || "")
-          .trim()
-          .toLowerCase();
 
         if (!destination) {
           throw new Error("Missing media destination.");
         }
 
-        throw new Error(
-          "Invalid upload destination. Choose a supported media location.",
-        );
-        /*
-          Security check:
-          The Blob pathname must match the destination generated
-          by Admin Media Library.
-        */
+        if (!isAllowedDestination(destination)) {
+          throw new Error(
+            `Invalid upload destination: "${destination}"`,
+          );
+        }
+
         const safeDestinationPrefix = `${destination}.`;
 
         if (
@@ -117,7 +135,7 @@ export async function POST(request) {
           !pathname.startsWith(safeDestinationPrefix)
         ) {
           throw new Error(
-            "Blob upload path does not match selected media destination.",
+            `Blob pathname does not match media destination. Pathname: "${pathname}", destination: "${destination}"`,
           );
         }
 
@@ -138,46 +156,51 @@ export async function POST(request) {
           maximumSizeInBytes: MAX_IMAGE_SIZE,
           addRandomSuffix: true,
 
-          /*
-            This payload is available after the direct Blob upload
-            completes. It is used to save the Blob URL in MongoDB.
-          */
           tokenPayload: JSON.stringify({
             userId: admin._id.toString(),
             role: admin.role,
             destination,
-            mediaType: mediaType || getMediaType(destination),
+            mediaType:
+              mediaType || getMediaType(destination),
           }),
         };
       },
 
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
+      onUploadCompleted: async ({
+        blob,
+        tokenPayload,
+      }) => {
         try {
-          const uploadInfo = JSON.parse(tokenPayload || "{}");
+          const uploadInfo = JSON.parse(
+            tokenPayload || "{}",
+          );
 
-          const destination = String(uploadInfo.destination || "")
+          const destination = normalizeDestination(
+            uploadInfo.destination,
+          );
+
+          const mediaType = String(
+            uploadInfo.mediaType || "other",
+          )
             .trim()
             .toLowerCase();
 
-          const mediaType = String(uploadInfo.mediaType || "other")
-            .trim()
-            .toLowerCase();
+          console.log("BLOB UPLOAD COMPLETED:", {
+            blobPathname: blob.pathname,
+            destination,
+            mediaType,
+            allowed: isAllowedDestination(destination),
+          });
 
           if (!destination) {
-            throw new Error("Upload completed without a media destination.");
+            throw new Error(
+              "Upload completed without a media destination.",
+            );
           }
-
-          console.log("BLOB DESTINATION VALIDATION:", {
-            pathname,
-            rawDestination: payload.destination,
-            destination: destination,
-            allowedFolders,
-            isAllowed: isAllowedDestination(destination),
-          });
 
           if (!isAllowedDestination(destination)) {
             throw new Error(
-              `Invalid upload destination: "${destination}". Choose a supported media location.`,
+              `Invalid completed upload destination: "${destination}"`,
             );
           }
 
@@ -211,7 +234,10 @@ export async function POST(request) {
             uploadedBy: uploadInfo.userId,
           });
         } catch (error) {
-          console.error("DEVICE MEDIA MONGODB SAVE ERROR:", error);
+          console.error(
+            "DEVICE MEDIA MONGODB SAVE ERROR:",
+            error,
+          );
 
           throw error;
         }
@@ -220,11 +246,16 @@ export async function POST(request) {
 
     return NextResponse.json(jsonResponse);
   } catch (error) {
-    console.error("Vercel Blob upload authorization error:", error);
+    console.error(
+      "Vercel Blob upload authorization error:",
+      error,
+    );
 
     return NextResponse.json(
       {
-        message: error.message || "Unable to authorize image upload.",
+        message:
+          error.message ||
+          "Unable to authorize image upload.",
       },
       {
         status: error.status || 400,
