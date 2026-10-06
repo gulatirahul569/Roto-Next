@@ -296,9 +296,8 @@ export default function ProductDetailsPage() {
       : [];
 
   return (
-    <main className="min-h-screen overflow-x-clip bg-[#FDFDFD] text-zinc-900 pb-24 lg:pb-16 antialiased">
-      <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8">
-
+    <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#FDFDFD] text-zinc-900 pb-24 lg:pb-16 antialiased">
+  <div className="mx-auto w-full max-w-full min-w-0 px-3 sm:px-6 lg:px-8">
         {/* Breadcrumb Navigation: < Home / Products */}
         <nav className="flex min-w-0 items-center gap-2 py-4 text-xs text-zinc-500 sm:py-5">
           <button
@@ -319,10 +318,10 @@ export default function ProductDetailsPage() {
         </nav>
 
         {/* Top Product Showcase */}
-        <div className="grid gap-6 sm:gap-10 lg:grid-cols-12 lg:gap-14">
+        <div className="grid w-full min-w-0 gap-6 sm:gap-10 lg:grid-cols-12 lg:gap-14">
 
           {/* Column 1: Gallery with rounded aesthetic */}
-          <div className="lg:col-span-6">
+          <div className="min-w-0 w-full lg:col-span-6">
             <div className="lg:sticky lg:top-22">
               <div className="overflow-hidden rounded-3xl ">
                 <ProductGallery
@@ -335,10 +334,10 @@ export default function ProductDetailsPage() {
           </div>
 
           {/* Column 2: Product information & purchase section */}
-          <section className="flex flex-col lg:col-span-6">
+          <div className="min-w-0 w-full lg:col-span-6">
             {/* Title & Brand */}
-            <div className="flex items-start justify-between gap-3 sm:gap-4">
-              <div className="min-w-0">
+            <div className="flex w-full min-w-0 items-start justify-between gap-2 sm:gap-4">
+              <div className="min-w-0 flex-1">
                 <h1 className="break-words text-2xl font-light tracking-tight text-zinc-900 sm:text-4xl">
                   {product.name}
                 </h1>
@@ -522,7 +521,7 @@ export default function ProductDetailsPage() {
                   <span aria-hidden="true">↗</span>
                 </a>
               ) : (
-                <div className="grid grid-cols-[auto_1fr] gap-3 sm:flex sm:flex-row sm:items-center">
+                <div className="grid w-full min-w-0 grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-2 sm:flex sm:flex-row sm:items-center sm:gap-3">
 
                   {/* Quantity Stepper */}
                   {isInStock && (
@@ -580,7 +579,7 @@ export default function ProductDetailsPage() {
                     type="button"
                     disabled={!isInStock}
                     onClick={handleBuyNow}
-                    className="col-span-2 h-12 rounded-full bg-zinc-900 text-sm font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500 sm:col-span-1 sm:flex-1"
+                    className="col-span-2 h-12 min-w-0 rounded-full bg-zinc-900 text-sm font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500 sm:col-span-1 sm:flex-1"
                   >
                     Buy Now
                   </button>
@@ -713,15 +712,15 @@ export default function ProductDetailsPage() {
               <FiLock size={12} />
               Encrypted 256-bit secure transaction
             </p>
-          </section>
+          </div>
         </div>
 
         {/* Divider */}
         <hr className="my-10 border-zinc-200 sm:my-16" />
 
         {/* Rating & Reviews Section */}
-        <section id="reviews" className="space-y-8">
-          <div className="grid gap-8 md:grid-cols-12 md:items-center">
+        <section id="reviews" className="w-full min-w-0 space-y-8">
+          <div className="grid w-full min-w-0 gap-8 md:grid-cols-12 md:items-center">
 
             {/* Rating breakdown */}
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6 md:col-span-6">
@@ -732,9 +731,9 @@ export default function ProductDetailsPage() {
                 <span className="text-xl font-medium text-zinc-400">/5</span>
               </div>
 
-              <div className="w-full max-w-xs flex-1 space-y-1.5">
+              <div className="w-full min-w-0 max-w-xs flex-1 space-y-1.5">
                 {[5, 4, 3, 2, 1].map((starNum) => (
-                  <div key={starNum} className="flex items-center gap-2 text-xs text-zinc-500">
+                  <div key={starNum} className="flex min-w-0 items-center gap-2 text-xs text-zinc-500">
                     <span className="flex items-center gap-0.5 w-6">
                       <FiStar size={11} className="fill-amber-500 text-amber-400" />
                       <span>{starNum}</span>
@@ -796,7 +795,7 @@ export default function ProductDetailsPage() {
       </div>
 
       {/* Mobile Sticky Bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 w-full max-w-[100vw] overflow-hidden border-t border-zinc-200 bg-white/95 p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden">
         {isExternalProduct ? (
           <a
             href={product.externalUrl}
@@ -808,8 +807,8 @@ export default function ProductDetailsPage() {
             <span aria-hidden="true">↗</span>
           </a>
         ) : (
-          <div className="flex items-center gap-3">
-            <div className="shrink-0">
+          <div className="flex w-full min-w-0 items-center gap-2.5">
+            <div className="min-w-0 shrink-0">
               <p className="text-lg font-bold text-zinc-950">
                 {formatPrice(productPrice)}
               </p>

@@ -46,7 +46,7 @@ function SimilarCard({ item }) {
         ) : null}
       </div>
 
-      <p className="mt-2 line-clamp-2 text-sm text-[#007185] group-hover:text-[#C7511F] group-hover:underline">
+      <p className="mt-2 line-clamp-2 break-words text-sm text-[#007185] group-hover:text-[#C7511F] group-hover:underline">
         {item.name}
       </p>
 
@@ -62,7 +62,7 @@ function SimilarCard({ item }) {
         ))}
       </div>
 
-      <p className="mt-1 text-base font-medium text-zinc-950">
+      <p className="mt-1 break-words text-base font-medium text-zinc-950">
         {isExternal ? "View on partner site" : formatPrice(item.price)}
       </p>
     </Link>
@@ -127,26 +127,27 @@ export default function SimilarProducts({ product }) {
   if (!isLoading && items.length === 0) return null;
 
   return (
-    <section className="mt-10 border-t border-zinc-200 pt-8">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-xl font-bold text-zinc-950">
+    <section className="mt-10 w-full min-w-0 max-w-full overflow-hidden border-t border-zinc-200 pt-8">
+      <div className="flex w-full min-w-0 items-center justify-between gap-3">
+        <h2 className="min-w-0 flex-1 break-words text-xl font-bold text-zinc-950">
           Similar products you may like
         </h2>
 
-        <div className="hidden gap-2 sm:flex">
+        <div className="hidden shrink-0 gap-2 sm:flex">
           <button
             type="button"
             onClick={() => scrollBy(-1)}
             aria-label="Scroll left"
-            className="grid h-9 w-9 place-items-center rounded-full border border-zinc-300 hover:bg-zinc-50"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-zinc-300 hover:bg-zinc-50"
           >
             <FiChevronLeft size={18} />
           </button>
+
           <button
             type="button"
             onClick={() => scrollBy(1)}
             aria-label="Scroll right"
-            className="grid h-9 w-9 place-items-center rounded-full border border-zinc-300 hover:bg-zinc-50"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-zinc-300 hover:bg-zinc-50"
           >
             <FiChevronRight size={18} />
           </button>
@@ -155,17 +156,22 @@ export default function SimilarProducts({ product }) {
 
       <div
         ref={scroller}
-        className="mt-5 flex snap-x gap-4 overflow-x-auto pb-3 [scrollbar-width:thin]"
+        className="mt-5 flex w-full min-w-0 max-w-full snap-x gap-4 overflow-x-auto overflow-y-hidden pb-3 [scrollbar-width:thin]"
       >
         {isLoading
           ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="w-44 shrink-0 animate-pulse sm:w-52">
+              <div
+                key={i}
+                className="w-44 shrink-0 animate-pulse sm:w-52"
+              >
                 <div className="aspect-square rounded-lg bg-zinc-200" />
                 <div className="mt-2 h-4 w-4/5 rounded bg-zinc-200" />
                 <div className="mt-2 h-4 w-1/3 rounded bg-zinc-200" />
               </div>
             ))
-          : items.map((item) => <SimilarCard key={item._id} item={item} />)}
+          : items.map((item) => (
+              <SimilarCard key={item._id} item={item} />
+            ))}
       </div>
     </section>
   );

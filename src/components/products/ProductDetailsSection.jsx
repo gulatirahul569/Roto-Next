@@ -29,46 +29,70 @@ export default function ProductDetailsSection({ product }) {
   }
 
   return (
-    <section className="mt-8 border-t border-zinc-200 pt-6">
-      <h2 className="flex items-center gap-2 text-lg font-bold uppercase tracking-wide text-zinc-950">
-        Product details
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-amber-50 text-amber-600">
+    <section className="mt-8 w-full min-w-0 max-w-full overflow-hidden border-t border-zinc-200 pt-6">
+      <h2 className="flex min-w-0 items-center gap-2 text-lg font-bold uppercase tracking-wide text-zinc-950">
+        <span className="min-w-0 break-words">
+          Product details
+        </span>
+
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-600">
           <FiFileText size={15} />
         </span>
       </h2>
 
       {sections.map((section, index) => (
-        <div key={`${section.title}-${index}`} className="mt-5">
-          <h3 className="flex items-center gap-2 text-base font-bold text-amber-700">
-            <span className="h-4 w-1 rounded-full bg-amber-400" aria-hidden="true" />
-            {section.title}
+        <div
+          key={`${section.title}-${index}`}
+          className="mt-5 min-w-0 max-w-full"
+        >
+          <h3 className="flex min-w-0 items-start gap-2 text-base font-bold text-amber-700">
+            <span
+              className="mt-1 h-4 w-1 shrink-0 rounded-full bg-amber-400"
+              aria-hidden="true"
+            />
+
+            <span className="min-w-0 break-words">
+              {section.title}
+            </span>
           </h3>
 
-          <div className="mt-1.5 space-y-0.5 text-[15px] leading-6 text-zinc-800">
+          <div className="mt-1.5 min-w-0 max-w-full space-y-0.5 text-[15px] leading-6 text-zinc-800">
             {section.lines.map((line, lineIndex) => (
-              <p key={lineIndex}>{line}</p>
+              <p
+                key={lineIndex}
+                className="min-w-0 max-w-full break-words [overflow-wrap:anywhere]"
+              >
+                {line}
+              </p>
             ))}
           </div>
         </div>
       ))}
 
       {specifications.length > 0 && (
-        <div className="mt-6">
-          <h3 className="flex items-center gap-2 text-base font-bold text-amber-700">
-            <span className="h-4 w-1 rounded-full bg-amber-400" aria-hidden="true" />
-            Specifications
+        <div className="mt-6 min-w-0 max-w-full">
+          <h3 className="flex min-w-0 items-start gap-2 text-base font-bold text-amber-700">
+            <span
+              className="mt-1 h-4 w-1 shrink-0 rounded-full bg-amber-400"
+              aria-hidden="true"
+            />
+
+            <span className="min-w-0 break-words">
+              Specifications
+            </span>
           </h3>
 
-          <dl className="mt-2 grid grid-cols-1 gap-x-8 sm:grid-cols-2">
+          <dl className="mt-2 grid w-full min-w-0 grid-cols-1 gap-x-8 sm:grid-cols-2">
             {specifications.map((row, index) => (
               <div
                 key={`${row.label}-${index}`}
-                className="border-b border-zinc-200 py-3"
+                className="min-w-0 max-w-full border-b border-zinc-200 py-3"
               >
-                <dt className="text-xs font-medium uppercase tracking-wide text-sky-700">
+                <dt className="min-w-0 break-words text-xs font-medium uppercase tracking-wide text-sky-700 [overflow-wrap:anywhere]">
                   {row.label}
                 </dt>
-                <dd className="mt-0.5 text-[15px] font-medium text-zinc-950">
+
+                <dd className="mt-0.5 min-w-0 break-words text-[15px] font-medium text-zinc-950 [overflow-wrap:anywhere]">
                   {row.value}
                 </dd>
               </div>
