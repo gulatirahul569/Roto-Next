@@ -134,3 +134,38 @@ export async function GET(request) {
     );
   }
 }
+function cleanDetailSections(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((section) => ({
+      title: stringValue(section?.title).slice(0, 80),
+      content:
+        typeof section?.content === "string"
+          ? section.content
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .slice(0, 30)
+              .join("\n")
+          : "",
+    }))
+    .filter((section) => section.title && section.content)
+    .slice(0, 12);
+}
+
+function cleanSpecifications(value) {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(
+    new Map(
+      value
+        .map((row) => ({
+          label: stringValue(row?.label).slice(0, 80),
+          value: stringValue(row?.value).slice(0, 120),
+        }))
+        .filter((row) => row.label && row.value)
+        .map((row) => [row.label.toLowerCase(), row]),
+    ).values(),
+  ).slice(0, 40);
+}

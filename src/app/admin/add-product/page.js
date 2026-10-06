@@ -1,13 +1,14 @@
 "use client";
 import { useAuth } from "../../../context/AuthContext";
 import { useEffect, useMemo, useState } from "react";
+import { FiImage, FiLoader, FiPlus, FiUpload, FiX } from "react-icons/fi";
+
+import ProductDetailsEditor from "../../../components/admin/ProductDetailsEditor";
 import {
-  FiImage,
-  FiLoader,
-  FiPlus,
-  FiUpload,
-  FiX,
-} from "react-icons/fi";
+  buildSectionRows,
+  buildSpecificationRows,
+  cleanProductDetails,
+} from "../../../data/productDetailTemplates";
 import {
   departmentOptions,
   getSubcategoryOptions,
@@ -36,6 +37,8 @@ const initialForm = {
   compareAtPrice: "",
   stock: "",
   sizes: [],
+  detailSections: buildSectionRows([]),
+  specifications: [],
 
   isActive: true,
   isFeatured: false,
@@ -152,16 +155,12 @@ export default function AddProductPage() {
     const mainImage = form.image.trim();
 
     return Array.from(
-      new Set(
-        [mainImage, ...additionalImageList].filter(Boolean),
-      ),
+      new Set([mainImage, ...additionalImageList].filter(Boolean)),
     );
   }, [form.image, additionalImageList]);
 
   useEffect(() => {
-    const previewUrls = selectedImages.map((file) =>
-      URL.createObjectURL(file),
-    );
+    const previewUrls = selectedImages.map((file) => URL.createObjectURL(file));
 
     setImagePreviewUrls(previewUrls);
 
@@ -188,11 +187,7 @@ export default function AddProductPage() {
     }));
 
     return [...urlItems, ...uploadItems];
-  }, [
-    externalImageList,
-    imagePreviewUrls,
-    selectedImages,
-  ]);
+  }, [externalImageList, imagePreviewUrls, selectedImages]);
 
   function updateField(field, value) {
     setForm((previous) => ({
@@ -216,9 +211,7 @@ export default function AddProductPage() {
           ? {
               ...size,
               [field]:
-                field === "stock"
-                  ? Math.max(0, Number(value || 0))
-                  : value,
+                field === "stock" ? Math.max(0, Number(value || 0)) : value,
             }
           : size,
       ),
@@ -249,6 +242,25 @@ export default function AddProductPage() {
       ...previous,
       department,
       subcategory: "",
+      specifications: buildSpecificationRows(
+        department,
+        "",
+        previous.specifications,
+      ),
+    }));
+  }
+
+  function handleSubcategoryChange(event) {
+    const subcategory = event.target.value;
+
+    setForm((previous) => ({
+      ...previous,
+      subcategory,
+      specifications: buildSpecificationRows(
+        previous.department,
+        subcategory,
+        previous.specifications,
+      ),
     }));
   }
 
@@ -297,8 +309,7 @@ export default function AddProductPage() {
       ...previous,
       purchaseMode,
       externalButtonText:
-        purchaseMode === "EXTERNAL_LINK" &&
-          !previous.externalButtonText
+        purchaseMode === "EXTERNAL_LINK" && !previous.externalButtonText
           ? "Explore Product"
           : previous.externalButtonText,
     }));
@@ -311,15 +322,9 @@ export default function AddProductPage() {
       return;
     }
 
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-    ];
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
-    const validFiles = files.filter((file) =>
-      allowedTypes.includes(file.type),
-    );
+    const validFiles = files.filter((file) => allowedTypes.includes(file.type));
 
     if (validFiles.length !== files.length) {
       setError("Only JPG, PNG, and WebP image files are allowed.");
@@ -327,10 +332,7 @@ export default function AddProductPage() {
       setError("");
     }
 
-    setSelectedImages((previousImages) => [
-      ...previousImages,
-      ...validFiles,
-    ]);
+    setSelectedImages((previousImages) => [...previousImages, ...validFiles]);
 
     event.target.value = "";
   }
@@ -369,17 +371,10 @@ export default function AddProductPage() {
     const uploadedUrls = [];
     const uploadBatchId = Date.now();
 
-    for (
-      let index = 0;
-      index < externalImageList.length;
-      index += 1
-    ) {
+    for (let index = 0; index < externalImageList.length; index += 1) {
       const sourceUrl = externalImageList[index];
 
-      const imageRole =
-        index === 0
-          ? "main-url"
-          : `gallery-url-${index}`;
+      const imageRole = index === 0 ? "main-url" : `gallery-url-${index}`;
 
       const destination = `products/${productSlug}/${imageRole}-${uploadBatchId}-${index}`;
 
@@ -398,11 +393,7 @@ export default function AddProductPage() {
       uploadedUrls.push(uploadedMedia.imageUrl);
     }
 
-    for (
-      let index = 0;
-      index < selectedImages.length;
-      index += 1
-    ) {
+    for (let index = 0; index < selectedImages.length; index += 1) {
       const file = selectedImages[index];
 
       const imageRole =
@@ -412,16 +403,10 @@ export default function AddProductPage() {
 
       const destination = `products/${productSlug}/${imageRole}-${uploadBatchId}-${index}`;
 
-      const uploadedMedia = await uploadStoreMedia(
-        file,
-        token,
-        destination,
-      );
+      const uploadedMedia = await uploadStoreMedia(file, token, destination);
 
       if (!uploadedMedia?.imageUrl) {
-        throw new Error(
-          `Unable to upload device image ${index + 1}.`,
-        );
+        throw new Error(`Unable to upload device image ${index + 1}.`);
       }
 
       uploadedUrls.push(uploadedMedia.imageUrl);
@@ -505,7 +490,10 @@ export default function AddProductPage() {
       ).values(),
     );
 
-    if (!isExternal && form.sizes.some((size) => !String(size.label || "").trim())) {
+    if (
+      !isExternal &&
+      form.sizes.some((size) => !String(size.label || "").trim())
+    ) {
       setError("Enter a label for every size, or remove the empty size row.");
       return;
     }
@@ -534,11 +522,11 @@ export default function AddProductPage() {
         throw new Error("Admin access is required to upload product images.");
       }
 
-      const uploadedImageUrls = await uploadProductImages(
-        slug,
-        token,
+      const uploadedImageUrls = await uploadProductImages(slug, token);
+      const { detailSections, specifications } = cleanProductDetails(
+        form.detailSections,
+        form.specifications,
       );
-
       const payload = {
         title,
         slug,
@@ -547,13 +535,9 @@ export default function AddProductPage() {
         shortDescription: form.shortDescription.trim(),
         brand: form.brand.trim(),
 
-        category:
-          selectedSubcategory?.title ||
-          form.subcategory,
+        category: selectedSubcategory?.title || form.subcategory,
 
-        newCategory: form.isNewDrop
-          ? "new"
-          : form.subcategory,
+        newCategory: form.isNewDrop ? "new" : form.subcategory,
 
         department: form.department,
         subcategory: form.subcategory,
@@ -561,9 +545,7 @@ export default function AddProductPage() {
         image: uploadedImageUrls[0],
         images: uploadedImageUrls,
 
-        price: isExternal
-          ? 0
-          : Number(form.price || 0),
+        price: isExternal ? 0 : Number(form.price || 0),
 
         compareAtPrice:
           !isExternal && form.compareAtPrice
@@ -577,7 +559,8 @@ export default function AddProductPage() {
             : Number(form.stock || 0),
 
         sizes: isExternal ? [] : cleanSizes,
-
+        detailSections,
+        specifications,
         currency: "INR",
 
         isActive: form.isActive,
@@ -585,13 +568,9 @@ export default function AddProductPage() {
 
         source: form.source,
 
-        purchaseMode: isAmazon
-          ? "EXTERNAL_LINK"
-          : form.purchaseMode,
+        purchaseMode: isAmazon ? "EXTERNAL_LINK" : form.purchaseMode,
 
-        externalUrl: isExternal
-          ? externalUrl
-          : "",
+        externalUrl: isExternal ? externalUrl : "",
 
         externalButtonText: isAmazon
           ? "Explore on Amazon"
@@ -600,24 +579,14 @@ export default function AddProductPage() {
             : "",
 
         vendor: {
-          name: isVendor
-            ? form.vendorName.trim()
-            : "",
-          sku: isVendor
-            ? form.vendorSku.trim()
-            : "",
-          vendorProductId: isVendor
-            ? form.vendorProductId.trim()
-            : "",
-          vendorUrl: isVendor
-            ? form.vendorUrl.trim()
-            : "",
+          name: isVendor ? form.vendorName.trim() : "",
+          sku: isVendor ? form.vendorSku.trim() : "",
+          vendorProductId: isVendor ? form.vendorProductId.trim() : "",
+          vendorUrl: isVendor ? form.vendorUrl.trim() : "",
         },
 
         amazon: {
-          asin: isAmazon
-            ? form.amazonAsin.trim().toUpperCase()
-            : "",
+          asin: isAmazon ? form.amazonAsin.trim().toUpperCase() : "",
         },
       };
 
@@ -629,7 +598,7 @@ export default function AddProductPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-        "Something went wrong while creating the product.",
+          "Something went wrong while creating the product.",
       );
     } finally {
       setIsSubmitting(false);
@@ -696,9 +665,7 @@ export default function AddProductPage() {
           className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-8"
         >
           <section className="rounded-xl border border-zinc-200 p-5">
-            <h2 className="text-lg font-black text-zinc-950">
-              Product source
-            </h2>
+            <h2 className="text-lg font-black text-zinc-950">Product source</h2>
 
             <div className="mt-4">
               <label className="mb-2 block text-sm font-bold text-zinc-800">
@@ -718,8 +685,8 @@ export default function AddProductPage() {
 
             {isAmazon && (
               <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm font-semibold text-orange-950">
-                This product opens Amazon through your affiliate link and
-                cannot be added to the Roto cart.
+                This product opens Amazon through your affiliate link and cannot
+                be added to the Roto cart.
               </div>
             )}
           </section>
@@ -730,8 +697,7 @@ export default function AddProductPage() {
             </h2>
 
             <p className="mt-1 text-sm text-zinc-600">
-              Category is generated automatically from the selected
-              subcategory.
+              Category is generated automatically from the selected subcategory.
             </p>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -748,10 +714,7 @@ export default function AddProductPage() {
                   <option value="ALL">Select department</option>
 
                   {departmentOptions.map((department) => (
-                    <option
-                      key={department.key}
-                      value={department.key}
-                    >
+                    <option key={department.key} value={department.key}>
                       {department.title}
                     </option>
                   ))}
@@ -766,9 +729,7 @@ export default function AddProductPage() {
                 <select
                   value={form.subcategory}
                   disabled={form.department === "ALL"}
-                  onChange={(event) =>
-                    updateField("subcategory", event.target.value)
-                  }
+                  onChange={handleSubcategoryChange}
                   className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
                 >
                   <option value="">
@@ -778,10 +739,7 @@ export default function AddProductPage() {
                   </option>
 
                   {subcategoryOptions.map((subcategory) => (
-                    <option
-                      key={subcategory.slug}
-                      value={subcategory.slug}
-                    >
+                    <option key={subcategory.slug} value={subcategory.slug}>
                       {subcategory.title}
                     </option>
                   ))}
@@ -803,7 +761,21 @@ export default function AddProductPage() {
             <h2 className="text-lg font-black text-zinc-950">
               Basic information
             </h2>
-
+            <ProductDetailsEditor
+              contextLabel={
+                selectedSubcategory
+                  ? `${form.department} › ${selectedSubcategory.title}`
+                  : ""
+              }
+              sections={form.detailSections}
+              specifications={form.specifications}
+              onSectionsChange={(sections) =>
+                updateField("detailSections", sections)
+              }
+              onSpecificationsChange={(specifications) =>
+                updateField("specifications", specifications)
+              }
+            />
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-2 block text-sm font-bold text-zinc-800">
@@ -828,10 +800,7 @@ export default function AddProductPage() {
                   type="text"
                   value={form.slug}
                   onChange={(event) =>
-                    updateField(
-                      "slug",
-                      createSlug(event.target.value),
-                    )
+                    updateField("slug", createSlug(event.target.value))
                   }
                   placeholder="oversized-cotton-t-shirt"
                   className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
@@ -846,9 +815,7 @@ export default function AddProductPage() {
                 <input
                   type="text"
                   value={form.brand}
-                  onChange={(event) =>
-                    updateField("brand", event.target.value)
-                  }
+                  onChange={(event) => updateField("brand", event.target.value)}
                   placeholder="Example: Roto"
                   className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                 />
@@ -862,10 +829,7 @@ export default function AddProductPage() {
                 <select
                   value={form.isActive ? "active" : "hidden"}
                   onChange={(event) =>
-                    updateField(
-                      "isActive",
-                      event.target.value === "active",
-                    )
+                    updateField("isActive", event.target.value === "active")
                   }
                   className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
                 >
@@ -885,10 +849,7 @@ export default function AddProductPage() {
                 value={form.shortDescription}
                 maxLength={300}
                 onChange={(event) =>
-                  updateField(
-                    "shortDescription",
-                    event.target.value,
-                  )
+                  updateField("shortDescription", event.target.value)
                 }
                 placeholder="A short one-line product summary"
                 className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
@@ -913,9 +874,7 @@ export default function AddProductPage() {
           </section>
 
           <section className="rounded-xl border border-zinc-200 p-5">
-            <h2 className="text-lg font-black text-zinc-950">
-              Product images
-            </h2>
+            <h2 className="text-lg font-black text-zinc-950">Product images</h2>
 
             <p className="mt-1 text-sm text-zinc-600">
               Paste direct image URLs, upload from your device, or use both.
@@ -930,9 +889,7 @@ export default function AddProductPage() {
               <input
                 type="url"
                 value={form.image}
-                onChange={(event) =>
-                  updateField("image", event.target.value)
-                }
+                onChange={(event) => updateField("image", event.target.value)}
                 placeholder="https://images.pexels.com/photos/..."
                 className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-200"
               />
@@ -951,10 +908,7 @@ export default function AddProductPage() {
                 rows={4}
                 value={form.additionalImages}
                 onChange={(event) =>
-                  updateField(
-                    "additionalImages",
-                    event.target.value,
-                  )
+                  updateField("additionalImages", event.target.value)
                 }
                 placeholder={
                   "One image URL per line\nhttps://images.pexels.com/photos/...\nhttps://images.pexels.com/photos/..."
@@ -986,7 +940,6 @@ export default function AddProductPage() {
                 <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-full bg-zinc-950 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-zinc-800">
                   <FiUpload size={16} />
                   Choose product images
-
                   <input
                     type="file"
                     multiple
@@ -1036,10 +989,7 @@ export default function AddProductPage() {
                         />
                       ) : (
                         <div className="grid size-full place-items-center text-zinc-400">
-                          <FiLoader
-                            size={22}
-                            className="animate-spin"
-                          />
+                          <FiLoader size={22} className="animate-spin" />
                         </div>
                       )}
 
@@ -1105,9 +1055,7 @@ export default function AddProductPage() {
                   onChange={(event) =>
                     updateField(
                       "amazonAsin",
-                      event.target.value
-                        .toUpperCase()
-                        .replace(/\s/g, ""),
+                      event.target.value.toUpperCase().replace(/\s/g, ""),
                     )
                   }
                   placeholder="Example: B0ABCDE123"
@@ -1148,10 +1096,7 @@ export default function AddProductPage() {
                   type="text"
                   value={form.vendorProductId}
                   onChange={(event) =>
-                    updateField(
-                      "vendorProductId",
-                      event.target.value,
-                    )
+                    updateField("vendorProductId", event.target.value)
                   }
                   placeholder="Vendor product ID"
                   className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2.5 outline-none"
@@ -1186,9 +1131,7 @@ export default function AddProductPage() {
                   onChange={handlePurchaseModeChange}
                   className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none"
                 >
-                  <option value="CHECKOUT">
-                    Buy through Roto checkout
-                  </option>
+                  <option value="CHECKOUT">Buy through Roto checkout</option>
                   <option value="EXTERNAL_LINK">
                     Open an external seller link
                   </option>
@@ -1211,10 +1154,7 @@ export default function AddProductPage() {
                     type="text"
                     value={form.externalButtonText}
                     onChange={(event) =>
-                      updateField(
-                        "externalButtonText",
-                        event.target.value,
-                      )
+                      updateField("externalButtonText", event.target.value)
                     }
                     placeholder="Explore Product"
                     className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none"
@@ -1241,10 +1181,7 @@ export default function AddProductPage() {
                       step="0.01"
                       value={form.compareAtPrice}
                       onChange={(event) =>
-                        updateField(
-                          "compareAtPrice",
-                          event.target.value,
-                        )
+                        updateField("compareAtPrice", event.target.value)
                       }
                       placeholder="Compare-at price (₹)"
                       className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 outline-none"
@@ -1352,18 +1289,13 @@ export default function AddProductPage() {
                 type="checkbox"
                 checked={form.isFeatured}
                 onChange={(event) =>
-                  updateField(
-                    "isFeatured",
-                    event.target.checked,
-                  )
+                  updateField("isFeatured", event.target.checked)
                 }
                 className="mt-0.5 size-4 accent-zinc-950"
               />
 
               <span>
-                <span className="block">
-                  Mark as featured product
-                </span>
+                <span className="block">Mark as featured product</span>
 
                 <span className="mt-1 block text-xs font-medium text-zinc-500">
                   Featured products can be prioritised in store sections.
@@ -1376,18 +1308,13 @@ export default function AddProductPage() {
                 type="checkbox"
                 checked={form.isNewDrop}
                 onChange={(event) =>
-                  updateField(
-                    "isNewDrop",
-                    event.target.checked,
-                  )
+                  updateField("isNewDrop", event.target.checked)
                 }
                 className="mt-0.5 size-4 accent-amber-600"
               />
 
               <span>
-                <span className="block text-amber-800">
-                  Mark as New Drop
-                </span>
+                <span className="block text-amber-800">Mark as New Drop</span>
 
                 <span className="mt-1 block text-xs font-medium text-zinc-500">
                   Show this product in the homepage New Drops section.

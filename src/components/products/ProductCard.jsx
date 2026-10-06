@@ -56,20 +56,27 @@ export default function ProductCard({ product }) {
   ];
   if (images.length === 0) images.push("/images/product-placeholder.png");
 
-  // Pricing
+  // Pricing: compareAtPrice is the original (crossed-out) price
   const price = Number(product.price || 0);
-  const mrp = Number(product.mrp || product.originalPrice || 0);
+  const mrp = Number(
+    product.compareAtPrice || product.mrp || product.originalPrice || 0
+  );
   const discount =
     product.discount ||
     (mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0);
 
   // Rating
   const rating = Number(product.rating || 0);
-  const ratingCount = product.ratingCount || product.reviewsCount || 0;
+  const ratingCount =
+    product.reviewCount || product.ratingCount || product.reviewsCount || 0;
 
-  // Sizes
+  // Sizes: show only sizes that are in stock
   const sizes = Array.isArray(product.sizes)
-    ? product.sizes.join(", ")
+    ? product.sizes
+        .filter((size) => typeof size === "string" || Number(size?.stock) > 0)
+        .map((size) => (typeof size === "string" ? size : size.label))
+        .filter(Boolean)
+        .join(", ")
     : product.sizes || "";
 
   const wished = isInWishlist(product._id);

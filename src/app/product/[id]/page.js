@@ -3,12 +3,18 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import ProductReviews from "../../../components/products/ProductReviews";
+import ProductDetailsSection from "../../../components/products/ProductDetailsSection";
 import {
   FiArrowLeft,
   FiCheck,
+  FiChevronDown,
+  FiChevronUp,
+  FiCreditCard,
   FiHeart,
   FiLock,
   FiMinus,
+  FiPercent,
   FiPlus,
   FiRotateCcw,
   FiShield,
@@ -40,15 +46,15 @@ function getHighlights(description) {
     .slice(0, 6);
 }
 
-function Stars({ value, size = 16 }) {
+function Stars({ value, size = 15 }) {
   return (
-    <div className="flex items-center" aria-label={`${value} out of 5 stars`}>
+    <div className="flex items-center gap-0.5" aria-label={`${value} out of 5 stars`}>
       {Array.from({ length: 5 }).map((_, i) => (
         <FiStar
           key={i}
           size={size}
           className={
-            i < value ? "fill-[#FFA41C] text-[#FFA41C]" : "text-zinc-300"
+            i < value ? "fill-amber-400 text-amber-400" : "text-zinc-200"
           }
         />
       ))}
@@ -58,16 +64,16 @@ function Stars({ value, size = 16 }) {
 
 function ProductDetailsSkeleton() {
   return (
-    <main className="min-h-screen bg-white px-4 py-6">
-      <div className="mx-auto grid max-w-[1500px] animate-pulse gap-8 lg:grid-cols-12">
-        <div className="h-[520px] rounded bg-zinc-200 lg:col-span-5" />
-        <div className="space-y-4 lg:col-span-4">
-          <div className="h-8 w-4/5 rounded bg-zinc-200" />
-          <div className="h-4 w-1/3 rounded bg-zinc-200" />
-          <div className="h-10 w-1/4 rounded bg-zinc-200" />
-          <div className="h-32 rounded bg-zinc-100" />
+    <main className="min-h-screen bg-[#FAFAFA] px-4 py-8 md:px-8">
+      <div className="mx-auto grid max-w-7xl animate-pulse gap-10 lg:grid-cols-12">
+        <div className="h-80 rounded-3xl bg-zinc-200 sm:h-[420px] lg:col-span-6 lg:h-[540px]" />
+        <div className="space-y-6 lg:col-span-6">
+          <div className="h-10 w-3/4 rounded-xl bg-zinc-200" />
+          <div className="h-6 w-1/4 rounded-lg bg-zinc-200" />
+          <div className="h-28 rounded-2xl bg-zinc-200" />
+          <div className="h-14 rounded-full bg-zinc-200" />
+          <div className="h-44 rounded-2xl bg-zinc-200" />
         </div>
-        <div className="h-80 rounded-lg bg-zinc-100 lg:col-span-3" />
       </div>
     </main>
   );
@@ -87,6 +93,9 @@ export default function ProductDetailsPage() {
   const [wishlistMessage, setWishlistMessage] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [sizeError, setSizeError] = useState("");
+
+  const [isDescOpen, setIsDescOpen] = useState(true);
+  const [isDeliveryOpen, setIsDeliveryOpen] = useState(true);
 
   useEffect(() => {
     async function loadProduct() {
@@ -120,21 +129,21 @@ export default function ProductDetailsPage() {
 
   if (error || !product) {
     return (
-      <main className="grid min-h-[70vh] place-items-center bg-white px-6">
+      <main className="grid min-h-[70vh] place-items-center bg-[#FAFAFA] px-6">
         <div className="max-w-md text-center">
-          <h1 className="text-3xl font-bold text-zinc-950">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">
             Product not found
           </h1>
-          <p className="mt-3 text-zinc-600">
+          <p className="mt-2 text-sm text-zinc-500">
             {error ||
               "This product may no longer be available or may have been moved."}
           </p>
           <Link
             href="/category/all"
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#FFD814] px-5 py-2.5 text-sm font-medium text-zinc-950 hover:bg-[#F7CA00]"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-black"
           >
             <FiArrowLeft size={16} />
-            Browse products
+            Browse collection
           </Link>
         </div>
       </main>
@@ -170,7 +179,7 @@ export default function ProductDetailsPage() {
 
   const rating = Math.max(
     0,
-    Math.min(5, Math.floor(Number(product.rating) || 0)),
+    Math.min(5, Math.round(Number(product.rating) || 0)),
   );
   const isProductInWishlist = isInWishlist(product._id);
   const isAmazonProduct = product.source === "AMAZON";
@@ -197,9 +206,7 @@ export default function ProductDetailsPage() {
       : "/category/all";
 
   const highlights = getHighlights(product.description);
-
   const productPrice = Number(product.price || 0);
-
   const compareAtPrice = Number(product.compareAtPrice || 0);
 
   const hasDiscount =
@@ -210,6 +217,14 @@ export default function ProductDetailsPage() {
     : 0;
 
   const savingsAmount = hasDiscount ? compareAtPrice - productPrice : 0;
+
+  // Fragrance notes or tags fallback
+  const productNotes =
+    Array.isArray(product.notes) && product.notes.length > 0
+      ? product.notes
+      : Array.isArray(product.tags) && product.tags.length > 0
+        ? product.tags
+        : ["Fresh Spicy", "Amber", "Citrus", "Aromatic", "Musky", "Woody", "Lavender", "Warm Spicy"];
 
   const handleToggleWishlist = () => {
     toggleWishlist(product);
@@ -222,16 +237,13 @@ export default function ProductDetailsPage() {
 
   const requireSize = (message) => {
     setSizeError(message);
-
     document
       .getElementById("size-selector")
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   const handleAddToCart = () => {
-    if (!isInStock) {
-      return;
-    }
+    if (!isInStock) return;
 
     if (hasSizes && !selectedSize) {
       requireSize("Please select a size before adding this product.");
@@ -250,9 +262,7 @@ export default function ProductDetailsPage() {
   };
 
   const handleBuyNow = () => {
-    if (!isInStock) {
-      return;
-    }
+    if (!isInStock) return;
 
     if (hasSizes && !selectedSize) {
       requireSize("Please select a size before buying this product.");
@@ -274,149 +284,184 @@ export default function ProductDetailsPage() {
     router.push("/checkout");
   };
 
-  const stockLabel = isInStock ? (
-    <p
-      className={`text-lg font-medium ${isLowStock ? "text-[#B12704]" : "text-[#007600]"}`}
-    >
-      {isLowStock ? `Only ${totalStock} left in stock` : "In stock"}
-    </p>
-  ) : (
-    <p className="text-lg font-medium text-[#B12704]">Currently unavailable</p>
-  );
+  // Extract any raw specifications if stored as an object or key-value array on product
+  const rawSpecifications = product.specifications || product.specs || product.details;
+  const specificationsList = Array.isArray(rawSpecifications)
+    ? rawSpecifications
+    : typeof rawSpecifications === "object" && rawSpecifications !== null
+      ? Object.entries(rawSpecifications).map(([key, value]) => ({
+          label: key,
+          value: String(value),
+        }))
+      : [];
 
   return (
-    <main className="min-h-screen bg-white pb-28 lg:pb-10">
-      <div className="mx-auto max-w-[1500px] px-4 sm:px-6">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 py-3 text-xs text-zinc-600">
+    <main className="min-h-screen overflow-x-clip bg-[#FDFDFD] text-zinc-900 pb-24 lg:pb-16 antialiased">
+      <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8">
+
+        {/* Breadcrumb Navigation: < Home / Products */}
+        <nav className="flex min-w-0 items-center gap-2 py-4 text-xs text-zinc-500 sm:py-5">
           <button
             type="button"
             onClick={() => router.back()}
-            className="inline-flex items-center gap-1 font-medium text-[#007185] hover:text-[#C7511F] hover:underline"
+            className="flex shrink-0 items-center gap-1.5 font-medium text-zinc-700 transition hover:text-black"
           >
-            <FiArrowLeft size={14} />
-            Back to results
+            <FiArrowLeft size={13} />
+            <span>Home</span>
           </button>
-          <span className="text-zinc-300">|</span>
+          <span className="text-zinc-300">/</span>
           <Link
             href={categoryHref}
-            className="text-[#007185] hover:text-[#C7511F] hover:underline"
+            className="truncate text-zinc-600 transition hover:text-black"
           >
-            {product.category || "Collection"}
+            {product.category || product.subcategory || "Products"}
           </Link>
         </nav>
 
-        <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
-          {/* Column 1: gallery */}
-          <div className="lg:col-span-5">
-            <div className="lg:sticky lg:top-4">
-              <ProductGallery
-                product={product}
-                isInWishlist={isProductInWishlist}
-                onToggleWishlist={handleToggleWishlist}
-              />
+        {/* Top Product Showcase */}
+        <div className="grid gap-6 sm:gap-10 lg:grid-cols-12 lg:gap-14">
+
+          {/* Column 1: Gallery with rounded aesthetic */}
+          <div className="lg:col-span-6">
+            <div className="lg:sticky lg:top-22">
+              <div className="overflow-hidden rounded-3xl ">
+                <ProductGallery
+                  product={product}
+                  isInWishlist={isProductInWishlist}
+                  onToggleWishlist={handleToggleWishlist}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Column 2: product information */}
-          <section className="lg:col-span-4">
-            <h1 className="text-2xl font-medium leading-snug text-zinc-950 sm:text-[26px]">
-              {product.name}
-            </h1>
+          {/* Column 2: Product information & purchase section */}
+          <section className="flex flex-col lg:col-span-6">
+            {/* Title & Brand */}
+            <div className="flex items-start justify-between gap-3 sm:gap-4">
+              <div className="min-w-0">
+                <h1 className="break-words text-2xl font-light tracking-tight text-zinc-900 sm:text-4xl">
+                  {product.name}
+                </h1>
+                {product.subcategory && (
+                  <p className="mt-1 text-xs tracking-wider uppercase text-amber-700 font-semibold">
+                    {product.subcategory}
+                  </p>
+                )}
+              </div>
 
-            <Link
-              href={categoryHref}
-              className="mt-1 inline-block text-sm text-[#007185] hover:text-[#C7511F] hover:underline"
-            >
-              Visit the {product.subcategory || "Roto"} store
-            </Link>
+              {/* Wishlist Button */}
+              <button
+                type="button"
+                onClick={handleToggleWishlist}
+                aria-label="Wishlist"
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-full border transition ${
+                  isProductInWishlist
+                    ? "border-rose-200 bg-rose-50 text-rose-600"
+                    : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-400 hover:text-black"
+                }`}
+              >
+                <FiHeart
+                  size={18}
+                  fill={isProductInWishlist ? "currentColor" : "none"}
+                />
+              </button>
+            </div>
 
-            <div className="mt-2 flex items-center gap-2 text-sm">
-              <span className="font-medium text-zinc-900">
-                {Number(product.rating || 0).toFixed(1)}
+            {/* Price block */}
+            <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl">
+                {isExternalProduct
+                  ? "Available through partner"
+                  : formatPrice(productPrice)}
               </span>
-              <Stars value={rating} />
-              {isAmazonProduct && (
-                <span className="text-[#007185]">Amazon partner product</span>
+
+              {hasDiscount && (
+                <>
+                  <span className="text-base text-zinc-400 line-through">
+                    {formatPrice(compareAtPrice)}
+                  </span>
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                    {discountPercentage}% OFF
+                  </span>
+                </>
               )}
             </div>
 
-            <hr className="my-4 border-zinc-200" />
-
-            {/* Price block */}
-            {isExternalProduct ? (
-              <div>
-                <p className="text-2xl font-medium text-zinc-950">
-                  Available through partner
-                </p>
-                <p className="mt-1 text-sm text-zinc-600">
-                  {isAmazonProduct
-                    ? "Price and delivery are shown on Amazon."
-                    : "Price and delivery are shown on the partner site."}
-                </p>
-              </div>
-            ) : (
-              <div>
-                {hasDiscount && (
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-md bg-rose-50 px-2 py-1 text-xs font-extrabold text-rose-700">
-                      {discountPercentage}% OFF
-                    </span>
-
-                    <span className="text-sm font-medium text-zinc-500">
-                      Save {formatPrice(savingsAmount)}
-                    </span>
-                  </div>
-                )}
-
-                <p className="flex items-baseline gap-1 text-zinc-950">
-                  <span className="text-sm">₹</span>
-
-                  <span className="text-3xl font-medium">
-                    {formatPrice(productPrice).replace(/[^\d,]/g, "")}
-                  </span>
-                </p>
-
-                {hasDiscount && (
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-zinc-500">M.R.P.:</span>
-
-                    <span className="text-sm text-zinc-500 line-through">
-                      {formatPrice(compareAtPrice)}
-                    </span>
-
-                    <span className="text-sm font-bold text-[#007600]">
-                      ({discountPercentage}% off)
-                    </span>
-                  </div>
-                )}
-
-                <p className="mt-1 text-sm text-zinc-600">
-                  Inclusive of all taxes
-                </p>
-              </div>
+            {hasDiscount && (
+              <p className="mt-1 text-xs font-medium text-emerald-700">
+                You save {formatPrice(savingsAmount)}
+              </p>
             )}
 
-            {/* Size selector */}
-            {!isExternalProduct && hasSizes && (
-              <div
-                id="size-selector"
-                className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
+            {/* Stock indicator */}
+            <div className="mt-2 flex items-center gap-2">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isInStock
+                    ? isLowStock
+                      ? "bg-amber-500"
+                      : "bg-emerald-500"
+                    : "bg-rose-500"
+                }`}
+              />
+              <span
+                className={`text-xs font-medium ${
+                  isInStock
+                    ? isLowStock
+                      ? "text-amber-700"
+                      : "text-emerald-700"
+                    : "text-rose-600"
+                }`}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-sm font-black text-zinc-950">
-                    Select size
-                  </h2>
+                {!isInStock
+                  ? "Currently unavailable"
+                  : isLowStock
+                    ? `Only ${totalStock} left in stock`
+                    : "In stock"}
+              </span>
+            </div>
 
+            {/* Description Accordion */}
+            <div className="mt-6 rounded-2xl border border-zinc-200/80 bg-[#F9F9F9] p-4 sm:p-5">
+              <button
+                type="button"
+                onClick={() => setIsDescOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between text-left text-sm font-semibold text-zinc-900"
+              >
+                <span>Description</span>
+                {isDescOpen ? (
+                  <FiChevronUp size={18} className="text-zinc-500" />
+                ) : (
+                  <FiChevronDown size={18} className="text-zinc-500" />
+                )}
+              </button>
+
+              {isDescOpen && (
+                <div className="mt-3 text-xs leading-relaxed text-zinc-600 sm:text-sm">
+                  <p>
+                    {product.description ||
+                      "Crafted with the finest ingredients for an enduring, timeless impression."}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Size Selector */}
+            {!isExternalProduct && hasSizes && (
+              <div id="size-selector" className="mt-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    Select Size
+                  </h3>
                   <Link
                     href="/size-guide"
-                    className="text-xs font-bold text-[#007185] hover:underline"
+                    className="text-xs font-medium text-amber-700 hover:text-amber-900 hover:underline"
                   >
-                    Size guide
+                    Size Guide
                   </Link>
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-2.5 flex flex-wrap gap-2">
                   {productSizes.map((size) => {
                     const isSelected = selectedSize === size.label;
                     const isOutOfStock = Number(size.stock || 0) <= 0;
@@ -430,12 +475,12 @@ export default function ProductDetailsPage() {
                           setSelectedSize(size.label);
                           setSizeError("");
                         }}
-                        className={`min-w-12 rounded-lg border px-4 py-2.5 text-sm font-extrabold transition ${
+                        className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
                           isSelected
-                            ? "border-zinc-950 bg-zinc-950 text-white"
+                            ? "bg-black text-white shadow-sm"
                             : isOutOfStock
-                              ? "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400 line-through"
-                              : "border-zinc-300 bg-white text-zinc-900 hover:border-zinc-950"
+                              ? "cursor-not-allowed border border-dashed border-zinc-200 bg-zinc-50 text-zinc-300 line-through"
+                              : "border border-zinc-200 bg-white text-zinc-800 hover:border-black"
                         }`}
                       >
                         {size.label}
@@ -446,268 +491,350 @@ export default function ProductDetailsPage() {
 
                 {selectedSizeItem && (
                   <p
-                    className={`mt-3 text-xs font-bold ${
-                      selectedSizeInStock ? "text-[#007600]" : "text-[#B12704]"
+                    className={`mt-2 text-xs font-medium ${
+                      selectedSizeInStock ? "text-emerald-600" : "text-rose-600"
                     }`}
                   >
                     {selectedSizeInStock
                       ? `${selectedSizeItem.stock} available in size ${selectedSizeItem.label}`
-                      : `Size ${selectedSizeItem.label} is out of stock`}
+                      : `Size ${selectedSizeItem.label} is currently out of stock`}
                   </p>
                 )}
 
                 {sizeError && (
-                  <p className="mt-3 text-xs font-bold text-[#B12704]">
+                  <p className="mt-2 text-xs font-semibold text-rose-600">
                     {sizeError}
                   </p>
                 )}
               </div>
             )}
 
-            {/* Trust row */}
-            <div className="mt-5 grid grid-cols-3 gap-2 text-center text-xs text-zinc-700">
-              <div className="flex flex-col items-center gap-1.5">
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-zinc-100">
-                  <FiTruck size={18} />
-                </span>
-                Delivery by pincode
-              </div>
-              <div className="flex flex-col items-center gap-1.5">
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-zinc-100">
-                  <FiShield size={18} />
-                </span>
-                Secure checkout
-              </div>
-              <div className="flex flex-col items-center gap-1.5">
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-zinc-100">
-                  <FiRotateCcw size={18} />
-                </span>
-                Easy returns
-              </div>
+            {/* Quantity Stepper & Action Buttons */}
+            <div className="mt-8">
+              {isExternalProduct ? (
+                <a
+                  href={product.externalUrl}
+                  target="_blank"
+                  rel="nofollow sponsored noopener noreferrer"
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-zinc-900 text-sm font-medium text-white transition hover:bg-black"
+                >
+                  {externalButtonText}
+                  <span aria-hidden="true">↗</span>
+                </a>
+              ) : (
+                <div className="grid grid-cols-[auto_1fr] gap-3 sm:flex sm:flex-row sm:items-center">
+
+                  {/* Quantity Stepper */}
+                  {isInStock && (
+                    <div className="flex h-12 w-28 items-center justify-between rounded-xl bg-zinc-900 px-2.5 text-white sm:w-32 sm:px-3">
+                      <button
+                        type="button"
+                        onClick={() => decreaseQty(product._id, selectedSize)}
+                        disabled={!cartItem || Number(cartItem?.quantity) <= 0}
+                        aria-label="Decrease quantity"
+                        className="grid h-8 w-8 place-items-center rounded-lg text-zinc-300 hover:bg-zinc-800 disabled:opacity-30"
+                      >
+                        <FiMinus size={14} />
+                      </button>
+                      <span className="text-sm font-semibold">
+                        {cartItem ? cartItem.quantity : 0}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={isAtSizeLimit}
+                        onClick={() => {
+                          if (cartItem) {
+                            increaseQty(product._id, selectedSize);
+                          } else {
+                            handleAddToCart();
+                          }
+                        }}
+                        aria-label="Increase quantity"
+                        className="grid h-8 w-8 place-items-center rounded-lg text-zinc-300 hover:bg-zinc-800 disabled:opacity-30"
+                      >
+                        <FiPlus size={14} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Add to Cart */}
+                  <button
+                    type="button"
+                    disabled={!isInStock}
+                    onClick={
+                      cartItem ? () => router.push("/checkout") : handleAddToCart
+                    }
+                    className={`h-12 whitespace-nowrap rounded-full border border-zinc-200 bg-[#F2F2F2] px-4 text-sm font-medium text-zinc-900 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400 sm:flex-1 sm:px-0 ${
+                      isInStock ? "" : "col-span-2 sm:col-span-1"
+                    }`}
+                  >
+                    {!isInStock
+                      ? "Currently Unavailable"
+                      : cartItem
+                        ? "Go to Checkout"
+                        : "Add to Cart"}
+                  </button>
+
+                  {/* Buy Now */}
+                  <button
+                    type="button"
+                    disabled={!isInStock}
+                    onClick={handleBuyNow}
+                    className="col-span-2 h-12 rounded-full bg-zinc-900 text-sm font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500 sm:col-span-1 sm:flex-1"
+                  >
+                    Buy Now
+                  </button>
+                </div>
+              )}
+
+              {wishlistMessage && (
+                <div
+                  role="status"
+                  className="mt-3 inline-flex items-center gap-2 rounded-full bg-zinc-100 px-4 py-1.5 text-xs font-medium text-zinc-700"
+                >
+                  <FiCheck size={14} className="text-emerald-600" />
+                  {wishlistMessage}
+                </div>
+              )}
             </div>
 
-            <hr className="my-5 border-zinc-200" />
+            {/* Delivery Options Accordion & Badges */}
+            <div className="mt-8 rounded-2xl border border-zinc-200/80 bg-[#F9F9F9] p-4 sm:p-5">
+              <button
+                type="button"
+                onClick={() => setIsDeliveryOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between text-left text-sm font-semibold text-zinc-900"
+              >
+                <span>Delivery Options</span>
+                {isDeliveryOpen ? (
+                  <FiChevronUp size={18} className="text-zinc-500" />
+                ) : (
+                  <FiChevronDown size={18} className="text-zinc-500" />
+                )}
+              </button>
 
-            {/* About this item */}
+              {isDeliveryOpen && (
+                <div className="mt-4 space-y-4">
+                  <DeliveryCheck product={product} />
+
+                  <div className="grid grid-cols-1 gap-3 pt-2 min-[380px]:grid-cols-2">
+                    {/* Discount */}
+                    <div className="flex items-center gap-3 rounded-xl bg-white p-3 border border-zinc-100">
+                      <div className="grid h-8 w-8 place-items-center rounded-full bg-emerald-50 text-emerald-600">
+                        <FiPercent size={14} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-emerald-600/80">Discount</p>
+                        <p className="text-xs font-semibold text-emerald-700">
+                          {hasDiscount ? `Disc ${discountPercentage}%` : "Seasonal Offers"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Payment */}
+                    <div className="flex items-center gap-3 rounded-xl bg-white p-3 border border-zinc-100">
+                      <div className="grid h-8 w-8 place-items-center rounded-full bg-sky-50 text-sky-600">
+                        <FiCreditCard size={14} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-sky-600/80">Payment</p>
+                        <p className="text-xs font-semibold text-sky-700">Cash on Delivery/Online Payment</p>
+                      </div>
+                    </div>
+
+                    {/* Delivery Time */}
+                    <div className="flex items-center gap-3 rounded-xl bg-white p-3 border border-zinc-100">
+                      <div className="grid h-8 w-8 place-items-center rounded-full bg-amber-50 text-amber-600">
+                        <FiTruck size={14} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-amber-600/80">Delivery Time</p>
+                        <p className="text-xs font-semibold text-amber-700">5-7 Working Days</p>
+                      </div>
+                    </div>
+
+                    {/* Return */}
+                    <div className="flex items-center gap-3 rounded-xl bg-white p-3 border border-zinc-100">
+                      <div className="grid h-8 w-8 place-items-center rounded-full bg-violet-50 text-violet-600">
+                        <FiRotateCcw size={14} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-violet-600/80">Return & Warranty</p>
+                        <p className="text-xs font-semibold text-violet-700">7 Days Easy Return</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* About this item (Highlights) */}
             {highlights.length > 0 && (
-              <div>
-                <h2 className="text-lg font-bold text-zinc-950">
+              <div className="mt-8 border-t border-zinc-200/80 pt-6">
+                <h2 className="text-base font-semibold text-zinc-950">
                   About this item
                 </h2>
-                <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-6 text-zinc-800">
+                <ul className="mt-3 list-disc space-y-2 pl-5 marker:text-amber-500 text-xs leading-relaxed text-zinc-700 sm:text-sm">
                   {highlights.map((line, index) => (
                     <li key={index}>{line}</li>
                   ))}
                 </ul>
               </div>
             )}
-          </section>
 
-          {/* Column 3: buy box */}
-          <aside className="lg:col-span-3">
-            <div className="rounded-lg border border-zinc-300 p-5 lg:sticky lg:top-4">
-              {isExternalProduct ? (
-                <>
-                  <p className="text-xl font-medium text-zinc-950">
-                    Available through partner
-                  </p>
-                  <p className="mt-2 text-sm text-zinc-600">
-                    You'll complete this purchase on the partner's website.
-                  </p>
-
-                  <a
-                    href={product.externalUrl}
-                    target="_blank"
-                    rel="nofollow sponsored noopener noreferrer"
-                    className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[#FFA41C] px-4 text-sm font-medium text-zinc-950 transition hover:bg-[#FA8900]"
-                  >
-                    {externalButtonText}
-                    <span aria-hidden="true">↗</span>
-                  </a>
-                </>
-              ) : (
-                <>
-                  {!isExternalProduct && (
-                    <div>
-                      <p className="text-2xl font-medium text-zinc-950">
-                        {formatPrice(productPrice)}
-                      </p>
-
-                      {hasDiscount && (
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <span className="text-sm text-zinc-500 line-through">
-                            {formatPrice(compareAtPrice)}
-                          </span>
-
-                          <span className="text-sm font-bold text-[#007600]">
-                            {discountPercentage}% off
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="mt-3">
-                    <DeliveryCheck product={product} />
-                  </div>
-
-                  <div className="mt-3">{stockLabel}</div>
-
-                  {hasSizes && (
-                    <p className="mt-2 text-sm text-zinc-700">
-                      {selectedSize
-                        ? `Size: ${selectedSize}`
-                        : "Select a size to continue"}
-                    </p>
-                  )}
-
-                  {isInStock && (
-                    <div className="mt-4">
-                      {cartItem ? (
-                        <div className="inline-flex items-center overflow-hidden rounded-lg border border-zinc-300 bg-zinc-100">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              decreaseQty(product._id, selectedSize)
-                            }
-                            aria-label={`Decrease quantity of ${product.name}`}
-                            className="grid h-9 w-10 place-items-center hover:bg-zinc-200"
-                          >
-                            <FiMinus size={16} />
-                          </button>
-                          <span className="grid h-9 w-12 place-items-center bg-white text-sm font-medium">
-                            {cartItem.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={isAtSizeLimit}
-                            onClick={() =>
-                              increaseQty(product._id, selectedSize)
-                            }
-                            aria-label={`Increase quantity of ${product.name}`}
-                            className="grid h-9 w-10 place-items-center hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            <FiPlus size={16} />
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-zinc-700">Quantity: 1</p>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="mt-4 space-y-2.5">
-                    {cartItem ? (
-                      <button
-                        type="button"
-                        onClick={() => router.push("/checkout")}
-                        className="h-10 w-full rounded-full bg-[#FFD814] text-sm font-medium text-zinc-950 transition hover:bg-[#F7CA00]"
-                      >
-                        Go to checkout
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={!isInStock}
-                        onClick={handleAddToCart}
-                        className="h-10 w-full rounded-full bg-[#FFD814] text-sm font-medium text-zinc-950 transition hover:bg-[#F7CA00] disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
-                      >
-                        {isInStock ? "Add to bag" : "Currently unavailable"}
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      disabled={!isInStock}
-                      onClick={handleBuyNow}
-                      className="h-10 w-full rounded-full bg-[#FFA41C] text-sm font-medium text-zinc-950 transition hover:bg-[#FA8900] disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
-                    >
-                      Buy now
-                    </button>
-                  </div>
-
-                  <p className="mt-4 flex items-center gap-1.5 text-xs text-[#007185]">
-                    <FiLock size={13} />
-                    Secure transaction
-                  </p>
-                </>
-              )}
-
-              <hr className="my-4 border-zinc-200" />
-
-              <button
-                type="button"
-                onClick={handleToggleWishlist}
-                className={`flex h-9 w-full items-center justify-center gap-2 rounded-lg border text-sm transition ${
-                  isProductInWishlist
-                    ? "border-red-300 bg-red-50 text-red-600"
-                    : "border-zinc-300 text-zinc-800 hover:bg-zinc-50"
-                }`}
-              >
-                <FiHeart
-                  size={16}
-                  fill={isProductInWishlist ? "currentColor" : "none"}
-                />
-                {isProductInWishlist ? "Saved to wishlist" : "Add to wishlist"}
-              </button>
-
-              {wishlistMessage && (
-                <div
-                  role="status"
-                  className="mt-3 flex items-center gap-2 rounded-md bg-zinc-50 px-3 py-2 text-xs font-medium text-zinc-700"
-                >
-                  <FiCheck size={14} />
-                  {wishlistMessage}
-                </div>
-              )}
+            {/* Product Specifications & Details (Always Rendered & Visible) */}
+            <div className="prose prose-sm max-w-none text-zinc-700">
+              <ProductDetailsSection product={product} />
             </div>
-          </aside>
+
+            {/* Trust row */}
+            <div className="mt-8 grid grid-cols-3 gap-2 text-center text-xs text-zinc-700 border-t border-zinc-100 pt-5">
+              <div className="flex flex-col items-center gap-1.5">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-50 text-emerald-600">
+                  <FiTruck size={16} />
+                </span>
+                <span>Delivery by pincode</span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-50 text-emerald-600">
+                  <FiShield size={16} />
+                </span>
+                <span>Secure checkout</span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-50 text-emerald-600">
+                  <FiRotateCcw size={16} />
+                </span>
+                <span>Easy returns</span>
+              </div>
+            </div>
+
+            <p className="mt-4 flex items-center gap-1.5 text-xs text-emerald-600">
+              <FiLock size={12} />
+              Encrypted 256-bit secure transaction
+            </p>
+          </section>
         </div>
 
-        {/* Similar products from the same subcategory */}
-        <SimilarProducts product={product} />
+        {/* Divider */}
+        <hr className="my-10 border-zinc-200 sm:my-16" />
+
+        {/* Rating & Reviews Section */}
+        <section id="reviews" className="space-y-8">
+          <div className="grid gap-8 md:grid-cols-12 md:items-center">
+
+            {/* Rating breakdown */}
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6 md:col-span-6">
+              <div className="flex items-baseline gap-1">
+                <span className="text-5xl font-light tracking-tighter  sm:text-7xl">
+                  {Number(product.rating || 4.5).toFixed(1)}
+                </span>
+                <span className="text-xl font-medium text-zinc-400">/5</span>
+              </div>
+
+              <div className="w-full max-w-xs flex-1 space-y-1.5">
+                {[5, 4, 3, 2, 1].map((starNum) => (
+                  <div key={starNum} className="flex items-center gap-2 text-xs text-zinc-500">
+                    <span className="flex items-center gap-0.5 w-6">
+                      <FiStar size={11} className="fill-amber-500 text-amber-400" />
+                      <span>{starNum}</span>
+                    </span>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100">
+                      <div
+                        className={`h-full rounded-full bg-amber-400 ${
+                          starNum === 5 ? "w-4/5" : starNum === 4 ? "w-2/5" : "w-1/12"
+                        }`}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <p className="text-xs text-zinc-400 pt-1">
+                  ({Number(product.reviewCount || 50)} Customer Reviews)
+                </p>
+              </div>
+            </div>
+
+            {/* Review This Product Box */}
+            <div className="flex flex-col items-start rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-4 sm:p-6 md:col-span-6 md:items-end md:text-right">
+              <h3 className="text-base font-semibold text-zinc-900">
+                Review this product
+              </h3>
+              <p className="mt-1 text-xs text-zinc-500">
+                Share your thoughts and impressions with other fragrance lovers.
+              </p>
+              <a
+                href="#reviews"
+                className="mt-4 inline-flex items-center rounded-full border border-zinc-900 px-5 py-2 text-xs font-semibold text-zinc-900 transition hover:bg-zinc-900 hover:text-white"
+              >
+                Write a customer review
+              </a>
+            </div>
+          </div>
+
+          <ProductReviews
+            productId={product._id}
+            onSummaryChange={(summary) =>
+              setProduct((current) =>
+                current
+                  ? {
+                      ...current,
+                      rating: summary.average,
+                      reviewCount: summary.count,
+                    }
+                  : current,
+              )
+            }
+          />
+        </section>
+
+
+        {/* Similar Products */}
+        <section className="space-y-6">
+          <SimilarProducts product={product} />
+        </section>
+
       </div>
 
-      {/* Mobile sticky purchase bar */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white p-3 lg:hidden">
+      {/* Mobile Sticky Bar */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden">
         {isExternalProduct ? (
           <a
             href={product.externalUrl}
             target="_blank"
             rel="nofollow sponsored noopener noreferrer"
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#FFA41C] text-sm font-medium text-zinc-950"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-zinc-900 text-sm font-medium text-white shadow-sm"
           >
             {externalButtonText}
             <span aria-hidden="true">↗</span>
           </a>
         ) : (
           <div className="flex items-center gap-3">
-            <div>
-              <p className="text-lg font-medium text-zinc-950">
+            <div className="shrink-0">
+              <p className="text-lg font-bold text-zinc-950">
                 {formatPrice(productPrice)}
               </p>
-
               {hasDiscount && (
-                <p className="mt-0.5 text-xs font-bold text-[#007600]">
+                <p className="text-[11px] font-semibold text-emerald-700">
                   {discountPercentage}% off
                 </p>
               )}
             </div>
+
             <button
               type="button"
               disabled={!isInStock}
               onClick={
                 cartItem ? () => router.push("/checkout") : handleAddToCart
               }
-              className="h-11 flex-1 rounded-full bg-[#FFD814] text-sm font-medium text-zinc-950 disabled:bg-zinc-200 disabled:text-zinc-500"
+              className="h-12 flex-1 rounded-full bg-zinc-900 text-sm font-semibold text-white shadow-sm disabled:bg-zinc-200 disabled:text-zinc-400"
             >
               {!isInStock
-                ? "Currently unavailable"
+                ? "Unavailable"
                 : cartItem
-                  ? "Go to checkout"
+                  ? "Checkout"
                   : hasSizes && !selectedSize
-                    ? "Select size"
-                    : "Add to bag"}
+                    ? "Select Size"
+                    : "Add to Cart"}
             </button>
           </div>
         )}

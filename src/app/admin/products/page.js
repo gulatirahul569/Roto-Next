@@ -17,6 +17,7 @@ import {
   FiUpload,
   FiX,
 } from "react-icons/fi";
+
 import { useAuth } from "../../../context/AuthContext";
 import {
   deleteProduct,
@@ -28,6 +29,12 @@ import {
   departmentOptions,
   getSubcategoryOptions,
 } from "../../../data/departmentData";
+import ProductDetailsEditor from "../../../components/admin/ProductDetailsEditor";
+import {
+  buildSectionRows,
+  buildSpecificationRows,
+  cleanProductDetails,
+} from "../../../data/productDetailTemplates";
 
 function formatPrice(price) {
   return new Intl.NumberFormat("en-IN", {
@@ -138,6 +145,7 @@ function EditProductModal({
   onAddImageUrl,
   onRemoveGalleryImage,
   onSetMainImage,
+  onDetailsChange,
   onSave,
 }) {
   const [newImageUrl, setNewImageUrl] = useState("");
@@ -336,7 +344,21 @@ function EditProductModal({
               />
             </label>
           </div>
-
+          <ProductDetailsEditor
+            contextLabel={
+              product.department && product.department !== "ALL"
+                ? `${product.department}${product.subcategory ? ` › ${product.subcategory}` : ""}`
+                : ""
+            }
+            sections={product.detailSections || []}
+            specifications={product.specifications || []}
+            onSectionsChange={(sections) =>
+              onDetailsChange({ detailSections: sections })
+            }
+            onSpecificationsChange={(specifications) =>
+              onDetailsChange({ specifications })
+            }
+          />
           <div>
             <div className="mb-2 flex items-center justify-between gap-3">
               <div>
@@ -1090,6 +1112,12 @@ export default function AdminProductsPage() {
       ...product,
       image: images[0] || "",
       images,
+      detailSections: buildSectionRows(product.detailSections),
+      specifications: buildSpecificationRows(
+        product.department,
+        product.subcategory,
+        product.specifications,
+      ),
     });
   };
 
@@ -1129,6 +1157,23 @@ export default function AdminProductsPage() {
           ...currentProduct,
           department: value,
           subcategory: "",
+          specifications: buildSpecificationRows(
+            value,
+            "",
+            currentProduct.specifications,
+          ),
+        };
+      }
+
+      if (name === "subcategory") {
+        return {
+          ...currentProduct,
+          subcategory: value,
+          specifications: buildSpecificationRows(
+            currentProduct.department,
+            value,
+            currentProduct.specifications,
+          ),
         };
       }
 
@@ -1248,6 +1293,12 @@ export default function AdminProductsPage() {
         [name]: type === "checkbox" ? checked : value,
       };
     });
+  };
+
+  const handleDetailsChange = (patch) => {
+    setEditingProduct((currentProduct) =>
+      currentProduct ? { ...currentProduct, ...patch } : currentProduct,
+    );
   };
 
   const handleEditImageUpload = async (file, uploadMode = "gallery") => {
@@ -1435,7 +1486,10 @@ export default function AdminProductsPage() {
         (total, size) => total + size.stock,
         0,
       );
-
+      const { detailSections, specifications } = cleanProductDetails(
+        editingProduct.detailSections,
+        editingProduct.specifications,
+      );
       const updatedProduct = {
         ...editingProduct,
 
@@ -1443,6 +1497,8 @@ export default function AdminProductsPage() {
         images: galleryImages,
 
         sizes: isExternalProduct ? [] : sizes,
+        detailSections,
+        specifications,
 
         price: sellingPrice,
         compareAtPrice,
@@ -1927,6 +1983,7 @@ export default function AdminProductsPage() {
         onRemoveGalleryImage={handleRemoveGalleryImage}
         onSetMainImage={handleSetMainImage}
         onSave={handleSaveProduct}
+        onDetailsChange={handleDetailsChange}
       />
 
       <DeleteProductModal

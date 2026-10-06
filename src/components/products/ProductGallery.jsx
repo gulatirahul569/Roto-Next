@@ -44,59 +44,106 @@ export default function ProductGallery({
   }, [gallery]);
 
   return (
-    <section className="bg-zinc-100 p-5 sm:p-8 lg:p-10">
-      <div className="relative flex min-h-[390px] items-center justify-center overflow-hidden rounded-2xl bg-white p-6 sm:min-h-[540px]">
-        <img
-          src={selectedImage}
-          alt={product?.name || "Product image"}
-          className="max-h-[470px] w-full object-contain drop-shadow-2xl"
-        />
+    <section className="w-full p-2 pt-0">
+      {/* Desktop: Thumbnails Left + Main Image Right */}
+      <div className="flex w-full gap-4">
+        {/* Thumbnails */}
+        {gallery.length > 1 && (
+          <div className="hidden w-[82px] shrink-0 flex-col pt-2 gap-3 lg:flex">
+            {gallery.map((image, index) => {
+              const isSelected = selectedImage === image;
 
-        <button
-          type="button"
-          onClick={onToggleWishlist}
-          aria-label={
-            isInWishlist
-              ? `Remove ${product?.name} from wishlist`
-              : `Add ${product?.name} to wishlist`
-          }
-          className={`absolute right-5 top-5 grid size-11 place-items-center rounded-full bg-white shadow-lg transition hover:scale-110 ${
-            isInWishlist
-              ? "text-red-500"
-              : "text-zinc-700 hover:text-red-500"
-          }`}
-        >
-          <FiHeart
-            size={21}
-            fill={isInWishlist ? "currentColor" : "none"}
+              return (
+                <button
+                  key={`${image}-${index}`}
+                  type="button"
+                  onClick={() => setSelectedImage(image)}
+                  aria-label={`Show product image ${index + 1}`}
+                  aria-pressed={isSelected}
+                  className={`relative aspect-square w-full overflow-hidden rounded-2xl bg-[#141414] transition-all duration-200 ${
+                    isSelected
+                      ? "ring-2 ring-black ring-offset-2 ring-offset-white opacity-100"
+                      : "opacity-65 hover:opacity-100"
+                  }`}
+                >
+                  <img
+                    src={image}
+                    alt={`${product?.name || "Product"} thumbnail ${
+                      index + 1
+                    }`}
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Main Image */}
+        <div className="relative min-w-0 flex-1 overflow-hidden rounded-[28px] bg-[#141414] shadow-sm">
+          <img
+            src={selectedImage}
+            alt={product?.name || "Product image"}
+            className="h-full min-h-[500px] w-full object-fill transition-all duration-300 hover:scale-105 lg:min-h-0"
           />
-        </button>
-      </div>
 
-      {gallery.length > 1 && (
-        <div className="mt-5 flex justify-center gap-3 overflow-x-auto pb-1">
-          {gallery.map((image, index) => (
+          {/* Wishlist floating toggle */}
+          {onToggleWishlist && (
             <button
-              key={`${image}-${index}`}
               type="button"
-              onClick={() => setSelectedImage(image)}
-              aria-label={`Show product image ${index + 1}`}
-              aria-pressed={selectedImage === image}
-              className={`size-20 shrink-0 overflow-hidden rounded-xl border-2 bg-white p-1 transition sm:size-24 ${
-                selectedImage === image
-                  ? "border-zinc-950 ring-2 ring-zinc-950/10"
-                  : "border-transparent hover:border-zinc-300"
+              onClick={onToggleWishlist}
+              aria-label={
+                isInWishlist
+                  ? `Remove ${product?.name} from wishlist`
+                  : `Add ${product?.name} to wishlist`
+              }
+              className={`absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-white/80 backdrop-blur-md shadow-sm transition hover:scale-105 ${
+                isInWishlist
+                  ? "text-rose-500"
+                  : "text-zinc-700 hover:text-rose-500"
               }`}
             >
-              <img
-                src={image}
-                alt={`${product?.name || "Product"} thumbnail ${index + 1}`}
-                className="size-full object-contain"
+              <FiHeart
+                size={18}
+                fill={isInWishlist ? "currentColor" : "none"}
               />
             </button>
-          ))}
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Thumbnails */}
+      {gallery.length > 1 && (
+        <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-5 lg:hidden">
+          {gallery.map((image, index) => {
+            const isSelected = selectedImage === image;
+
+            return (
+              <button
+                key={`${image}-${index}`}
+                type="button"
+                onClick={() => setSelectedImage(image)}
+                aria-label={`Show product image ${index + 1}`}
+                aria-pressed={isSelected}
+                className={`relative aspect-square w-full overflow-hidden rounded-2xl bg-[#141414] transition-all duration-200 ${
+                  isSelected
+                    ? "ring-2 ring-black ring-offset-2 ring-offset-white opacity-100"
+                    : "opacity-65 hover:opacity-100"
+                }`}
+              >
+                <img
+                  src={image}
+                  alt={`${product?.name || "Product"} thumbnail ${
+                    index + 1
+                  }`}
+                className="h-full w-full object-cover"
+                />
+              </button>
+            );
+          })}
         </div>
       )}
     </section>
   );
 }
+

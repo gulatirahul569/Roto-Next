@@ -34,6 +34,41 @@ function numberOrDefault(value, fallback = 0) {
 
   return Number.isFinite(number) ? number : fallback;
 }
+function cleanDetailSections(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((section) => ({
+      title: stringValue(section?.title).slice(0, 80),
+      content:
+        typeof section?.content === "string"
+          ? section.content
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .slice(0, 30)
+              .join("\n")
+          : "",
+    }))
+    .filter((section) => section.title && section.content)
+    .slice(0, 12);
+}
+
+function cleanSpecifications(value) {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(
+    new Map(
+      value
+        .map((row) => ({
+          label: stringValue(row?.label).slice(0, 80),
+          value: stringValue(row?.value).slice(0, 120),
+        }))
+        .filter((row) => row.label && row.value)
+        .map((row) => [row.label.toLowerCase(), row]),
+    ).values(),
+  ).slice(0, 40);
+}
 
 function isValidUrl(value) {
   try {
@@ -49,12 +84,9 @@ function isAmazonUrl(value) {
   try {
     const hostname = new URL(value).hostname.toLowerCase();
 
-    return [
-      "amazon.in",
-      "www.amazon.in",
-      "amzn.in",
-      "amzn.to",
-    ].includes(hostname);
+    return ["amazon.in", "www.amazon.in", "amzn.in", "amzn.to"].includes(
+      hostname,
+    );
   } catch {
     return false;
   }
@@ -87,14 +119,10 @@ export async function POST(request) {
       : "INVENTORY";
 
     const requestedPurchaseMode =
-      body.purchaseMode === "EXTERNAL_LINK"
-        ? "EXTERNAL_LINK"
-        : "CHECKOUT";
+      body.purchaseMode === "EXTERNAL_LINK" ? "EXTERNAL_LINK" : "CHECKOUT";
 
     const purchaseMode =
-      source === "AMAZON"
-        ? "EXTERNAL_LINK"
-        : requestedPurchaseMode;
+      source === "AMAZON" ? "EXTERNAL_LINK" : requestedPurchaseMode;
 
     const name = stringValue(body.name || body.title);
     const slug = createSlug(body.slug || name);
@@ -195,14 +223,10 @@ export async function POST(request) {
     }
 
     const additionalImages = Array.isArray(body.images)
-      ? body.images
-          .map((image) => stringValue(image))
-          .filter(Boolean)
+      ? body.images.map((image) => stringValue(image)).filter(Boolean)
       : [];
 
-    const images = Array.from(
-      new Set([primaryImage, ...additionalImages]),
-    );
+    const images = Array.from(new Set([primaryImage, ...additionalImages]));
 
     const isExternalProduct = purchaseMode === "EXTERNAL_LINK";
 
@@ -212,10 +236,7 @@ export async function POST(request) {
             body.sizes
               .map((size) => ({
                 label: stringValue(size?.label),
-                stock: Math.max(
-                  0,
-                  Math.floor(numberOrDefault(size?.stock, 0)),
-                ),
+                stock: Math.max(0, Math.floor(numberOrDefault(size?.stock, 0))),
               }))
               .filter((size) => size.label)
               .map((size) => [size.label.toLowerCase(), size]),
@@ -240,10 +261,7 @@ export async function POST(request) {
       department,
       subcategory,
 
-      rating: Math.max(
-        0,
-        Math.min(5, numberOrDefault(body.rating, 0)),
-      ),
+      rating: Math.max(0, Math.min(5, numberOrDefault(body.rating, 0))),
 
       image: primaryImage,
       images,
@@ -264,6 +282,9 @@ export async function POST(request) {
         isExternalProduct || !body.compareAtPrice
           ? null
           : Math.max(0, numberOrDefault(body.compareAtPrice, 0)),
+
+      detailSections: cleanDetailSections(body.detailSections),
+      specifications: cleanSpecifications(body.specifications),
 
       sizes: productSizes,
 
@@ -295,10 +316,7 @@ export async function POST(request) {
 
         vendorProductId:
           source === "VENDOR"
-            ? stringValue(
-                body.vendor?.vendorProductId ||
-                  body.vendorProductId,
-              )
+            ? stringValue(body.vendor?.vendorProductId || body.vendorProductId)
             : "",
 
         vendorUrl:
@@ -316,9 +334,7 @@ export async function POST(request) {
             : "",
 
         associateTag:
-          source === "AMAZON"
-            ? stringValue(body.amazon?.associateTag)
-            : "",
+          source === "AMAZON" ? stringValue(body.amazon?.associateTag) : "",
       },
     };
 
@@ -359,4 +375,40 @@ export async function POST(request) {
       },
     );
   }
+}
+
+function cleanDetailSections(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((section) => ({
+      title: stringValue(section?.title).slice(0, 80),
+      content:
+        typeof section?.content === "string"
+          ? section.content
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .slice(0, 30)
+              .join("\n")
+          : "",
+    }))
+    .filter((section) => section.title && section.content)
+    .slice(0, 12);
+}
+
+function cleanSpecifications(value) {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(
+    new Map(
+      value
+        .map((row) => ({
+          label: stringValue(row?.label).slice(0, 80),
+          value: stringValue(row?.value).slice(0, 120),
+        }))
+        .filter((row) => row.label && row.value)
+        .map((row) => [row.label.toLowerCase(), row]),
+    ).values(),
+  ).slice(0, 40);
 }

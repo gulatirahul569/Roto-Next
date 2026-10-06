@@ -130,3 +130,28 @@ export async function uploadProductImage(file, token) {
     imageUrl: blob.url,
   };
 }
+
+export function fetchProductReviews(productId, token) {
+  return apiRequest(`/products/${productId}/reviews`, {
+    token,
+  });
+}
+
+export function submitProductReview(productId, reviewData, token) {
+  return apiRequest(`/products/${productId}/reviews`, {
+    method: "POST",
+    body: reviewData,
+    token,
+  });
+}
+
+export function deleteProductReview(productId, token) {
+  return apiRequest(`/products/${productId}/reviews`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export function fetchTopReviews(limit = 4) {
+  return apiRequest(`/reviews/top?limit=${limit}`);
+}

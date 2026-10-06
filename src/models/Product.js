@@ -168,6 +168,11 @@ const ProductSchema = new mongoose.Schema(
       min: 0,
       max: 5,
     },
+        reviewCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
 
     image: {
       type: String,
@@ -223,6 +228,25 @@ const ProductSchema = new mongoose.Schema(
 
   default: [],
 },
+  detailSections: {
+      type: [
+        {
+          title: { type: String, required: true, trim: true, maxlength: 80 },
+          content: { type: String, default: "", trim: true },
+        },
+      ],
+      default: [],
+    },
+
+    specifications: {
+      type: [
+        {
+          label: { type: String, required: true, trim: true, maxlength: 80 },
+          value: { type: String, required: true, trim: true, maxlength: 120 },
+        },
+      ],
+      default: [],
+    },
 
     isActive: {
       type: Boolean,
