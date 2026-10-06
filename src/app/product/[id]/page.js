@@ -428,7 +428,7 @@ export default function ProductDetailsPage() {
                 onClick={() => setIsDescOpen((prev) => !prev)}
                 className="flex w-full items-center justify-between text-left text-sm font-semibold text-zinc-900"
               >
-                <span>Description</span>
+                <span className="text-amber-700" >Description</span>
                 {isDescOpen ? (
                   <FiChevronUp size={18} className="text-zinc-500" />
                 ) : (
@@ -450,7 +450,7 @@ export default function ProductDetailsPage() {
             {!isExternalProduct && hasSizes && (
               <div id="size-selector" className="mt-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  <h3 className="text-xs text-amber-700 font-semibold uppercase tracking-wider ">
                     Select Size
                   </h3>
                   <Link
@@ -605,7 +605,7 @@ export default function ProductDetailsPage() {
                 onClick={() => setIsDeliveryOpen((prev) => !prev)}
                 className="flex w-full items-center justify-between text-left text-sm font-semibold text-zinc-900"
               >
-                <span>Delivery Options</span>
+                <span className="text-amber-700">Delivery Options</span>
                 {isDeliveryOpen ? (
                   <FiChevronUp size={18} className="text-zinc-500" />
                 ) : (
